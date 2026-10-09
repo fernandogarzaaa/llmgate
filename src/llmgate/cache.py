@@ -188,25 +188,46 @@ class _Entry:
 
 
 class _Namespace:
+    """Entries of one namespace plus a row-aligned embedding matrix that grows in place
+    (amortised doubling), so a lookup is one matrix-vector product instead of a re-stack."""
+
     def __init__(self) -> None:
         self.entries: List[_Entry] = []
-        self.matrix: Optional[np.ndarray] = None
+        self._mat: Optional[np.ndarray] = None  # capacity >= len(entries); first len(entries) rows valid
+        self._earliest = 0.0  # earliest expiry among entries (0 = nothing expires)
+
+    def _rebuild(self) -> None:
+        self._mat = np.stack([e.vec for e in self.entries]) if self.entries else None
+        exp = [e.expires for e in self.entries if e.expires]
+        self._earliest = min(exp) if exp else 0.0
 
     def add(self, e: _Entry, max_entries: int) -> None:
         self.entries.append(e)
-        del self.entries[:-max_entries]  # keep the newest max_entries
-        self.matrix = None
+        n = len(self.entries)
+        if self._mat is not None:
+            if n > len(self._mat):
+                grown = np.empty((2 * len(self._mat), self._mat.shape[1]), dtype=np.float32)
+                grown[: n - 1] = self._mat[: n - 1]
+                self._mat = grown
+            self._mat[n - 1] = e.vec
+        over = n - max_entries
+        if over > 0:  # keep the newest max_entries
+            del self.entries[:over]
+            if self._mat is not None:
+                self._mat[: n - over] = self._mat[over:n].copy()
+        if e.expires and (not self._earliest or e.expires < self._earliest):
+            self._earliest = e.expires
 
     def best(self, vec: np.ndarray, now: float) -> Tuple[Optional[int], float]:
-        live = [e for e in self.entries if not e.expires or e.expires > now]
-        if len(live) != len(self.entries):
-            self.entries = live
-            self.matrix = None
+        if self._earliest and self._earliest <= now:
+            self.entries = [e for e in self.entries if not e.expires or e.expires > now]
+            self._rebuild()
         if not self.entries:
             return None, -1.0
-        if self.matrix is None:
-            self.matrix = np.stack([e.vec for e in self.entries])
-        sims = self.matrix @ vec
+        if self._mat is None:
+            self._rebuild()
+        assert self._mat is not None
+        sims = self._mat[: len(self.entries)] @ vec
         i = int(np.argmax(sims))
         return i, float(sims[i])
 

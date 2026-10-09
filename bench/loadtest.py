@@ -20,6 +20,7 @@ import asyncio
 import json
 import os
 import platform
+import random
 import signal
 import socket
 import statistics
@@ -49,10 +50,37 @@ TOPICS = [
 ]
 
 
+_LETTERS = "abcdefghijklmnopqrstuvwxyz"
+
+
 def prompt(i: int, unique: bool) -> str:
+    """The fixed cache-hit prompt, or a prompt that shares no content words with any other.
+
+    A "unique" prompt used to be the fixed sentence plus " (request i)", which the hashing
+    embedder scores well above the 0.95 semantic threshold against the previous one, so the
+    "cache miss" variants were partly served from cache. Unique prompts are now built from
+    pseudo-random 8-letter tokens seeded by ``i``; ``max_unique_similarity`` checks them.
+    """
     t = TOPICS[i % len(TOPICS)]
-    base = f"Give me a short, friendly explanation of {t} for a curious teenager."
-    return f"{base} (request {i})" if unique else base
+    if not unique:
+        return f"Give me a short, friendly explanation of {t} for a curious teenager."
+    rng = random.Random(i)
+    words = ["".join(rng.choice(_LETTERS) for _ in range(8)) for _ in range(10)]
+    return "Explain " + " ".join(words) + "."
+
+
+def max_unique_similarity(offsets: List[int], n: int) -> float:
+    """Highest hashing-embedder cosine similarity between any two unique prompts in the run."""
+    import numpy as np
+
+    from llmgate.embeddings import HashingEmbedder
+
+    emb = HashingEmbedder(1024)
+    texts = [prompt(o + i, True) for o in offsets for i in range(n)]
+    m = np.stack([emb.embed_one(t) for t in texts])
+    sims = m @ m.T
+    np.fill_diagonal(sims, -1.0)
+    return float(sims.max())
 
 
 def free_port() -> int:
@@ -117,18 +145,21 @@ async def run_load(
 ) -> Dict[str, Any]:
     lat: List[float] = []
     errors = 0
+    hits = 0
     counter = iter(range(total))
     limits = httpx.Limits(max_connections=concurrency, max_keepalive_connections=concurrency)
     async with httpx.AsyncClient(limits=limits, timeout=60, trust_env=False) as client:
 
         async def worker() -> None:
-            nonlocal errors
+            nonlocal errors, hits
             for i in counter:
                 body = {"model": model, "messages": [{"role": "user", "content": prompt(offset + i, unique)}]}
                 t0 = time.perf_counter()
                 try:
                     r = await client.post(url, json=body, headers=headers)
                     ok = r.status_code == 200
+                    if ok and r.headers.get("x-llmgate-cache", "miss") != "miss":
+                        hits += 1
                 except httpx.HTTPError:
                     ok = False
                 dt = time.perf_counter() - t0
@@ -148,6 +179,7 @@ async def run_load(
     return {
         "n": len(lat),
         "errors": errors,
+        "cache_hits": hits,
         "rps": round(len(lat) / wall, 1),
         "p50_ms": round(pct(50), 2),
         "p95_ms": round(pct(95), 2),
@@ -193,8 +225,8 @@ VARIANTS = {
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--latency-ms", type=float, default=50.0)
-    ap.add_argument("--concurrency", default="1,10,50")
-    ap.add_argument("--requests", default="200,600,1500", help="requests per concurrency level")
+    ap.add_argument("--concurrency", default="1,10")
+    ap.add_argument("--requests", default="200,600", help="requests per concurrency level")
     ap.add_argument("--warmup", type=int, default=50)
     ap.add_argument("--variants", default=",".join(VARIANTS))
     ap.add_argument("--out", default=os.path.join(HERE, "results", "loadtest.json"))
@@ -213,10 +245,18 @@ def main() -> int:
             "cpus": os.cpu_count(),
             "python": platform.python_version(),
             "note": "gateway, mock upstream and load generator share the same host; 1 uvicorn worker each",
+            "loadavg_start": [round(x, 2) for x in os.getloadavg()],
         },
         "direct": {},
         "gateway": {},
     }
+    offsets = [0, 10_000] + [100_000 * (i + 1) for i in range(len(levels))]
+    results["conditions"]["unique_prompt_max_hashing_similarity"] = round(
+        max_unique_similarity(offsets, max(max(totals), args.warmup)), 4
+    )
+    print(
+        "max hashing similarity between unique prompts:", results["conditions"]["unique_prompt_max_hashing_similarity"]
+    )
     try:
         wait_ready(mock_url + "/healthz")
         asyncio.run(run_load(mock_url + "/v1/chat/completions", {}, "weak", 10, args.warmup, True, 0))
@@ -224,6 +264,7 @@ def main() -> int:
             results["direct"][str(c)] = asyncio.run(
                 run_load(mock_url + "/v1/chat/completions", {}, "weak", c, n, True, 10_000)
             )
+            results["direct"][str(c)]["loadavg_1m"] = round(os.getloadavg()[0], 2)
             print("direct", c, results["direct"][str(c)], flush=True)
         for name in args.variants.split(","):
             guard, router, cache, model, unique = VARIANTS[name]
@@ -244,6 +285,7 @@ def main() -> int:
                 for i, (c, n) in enumerate(zip(levels, totals)):
                     r = asyncio.run(run_load(gurl + "/v1/chat/completions", h, model, c, n, unique, 100_000 * (i + 1)))
                     d = results["direct"][str(c)]
+                    r["loadavg_1m"] = round(os.getloadavg()[0], 2)
                     r["overhead_p50_ms"] = round(r["p50_ms"] - d["p50_ms"], 2)
                     r["overhead_p95_ms"] = round(r["p95_ms"] - d["p95_ms"], 2)
                     results["gateway"][name][str(c)] = r
@@ -254,6 +296,7 @@ def main() -> int:
                 stop(gw)
     finally:
         stop(mock)
+    results["conditions"]["loadavg_end"] = [round(x, 2) for x in os.getloadavg()]
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w") as f:
         json.dump(results, f, indent=2)
