@@ -32,6 +32,21 @@ def loadtest() -> str:
         f"Mock upstream latency {c['mock_latency_ms']:.0f} ms; {c['cpus']} vCPU {c['machine']}, "
         f"Python {c['python']}; {c['note']}.\n"
     ]
+    if "loadavg_start" in c:
+        la = [d["direct"][lv].get("loadavg_1m") for lv in levels]
+        la += [per[lv].get("loadavg_1m") for per in d["gateway"].values() for lv in levels]
+        la = [x for x in la if x is not None]
+        out.append(
+            f"Host 1-minute load average: {c['loadavg_start'][0]} at start, {c['loadavg_end'][0]} at end, "
+            f"{min(la)}-{max(la)} across the runs (other jobs were running on the same {c['cpus']} vCPUs, "
+            "so absolute latencies are inflated and noisy).\n"
+        )
+    if "unique_prompt_max_hashing_similarity" in c:
+        out.append(
+            "Miss variants use prompts built from seeded random tokens; the highest hashing-embedder "
+            f"similarity between any two of them is {c['unique_prompt_max_hashing_similarity']}, far below "
+            "the 0.95 semantic threshold.\n"
+        )
     out.append("| configuration | " + " | ".join(f"c={lv} p50 / p95 (ms)" for lv in levels) + " |")
     out.append("|---|" + "---|" * len(levels))
     row = ["direct to mock (baseline)"]
@@ -72,6 +87,17 @@ def loadtest() -> str:
         out.append("| " + " | ".join(row) + " |")
     errs = sum(per[lv]["errors"] for per in d["gateway"].values() for lv in levels)
     out.append(f"\nFailed requests across all gateway runs: {errs}.\n")
+    hits = {
+        name: sum(per[lv].get("cache_hits", 0) for lv in levels)
+        for name, per in d["gateway"].items()
+        if any("cache_hits" in per[lv] for lv in levels)
+    }
+    if hits:
+        out.append(
+            "Cache hits served during the measured runs: "
+            + ", ".join(f"{LABELS.get(k, k)}: {v}" for k, v in hits.items())
+            + ".\n"
+        )
     return "\n".join(out)
 
 
@@ -125,6 +151,25 @@ def semantic() -> str:
             out.append(
                 f"| {r['name']} | {model} (${p[0]} / ${p[1]}) | ${v['cost_per_request_usd']:.6f} | "
                 f"${v['saved_per_1M_requests_usd']:,.0f} | {v['wrong_answers_per_1M_requests']:,} |"
+            )
+    prod = 0.98
+    out.append(
+        f"\nThe same estimate at threshold {prod} (the value in examples/config.production.yaml), "
+        "derived from the test-half sweep above (saved = hit rate x cost per request; wrong answers = "
+        "false-hit rate x 1M):\n"
+    )
+    out.append("| embedder | model | hit precision | saved per 1M requests | wrong answers per 1M requests |")
+    out.append("|---|---|---|---|---|")
+    for name, r in d["embedders"].items():
+        m = next((x for x in r.get("test_sweep", []) if abs(x["threshold"] - prod) < 1e-9), None)
+        if m is None:
+            continue
+        for model, (pin, pout) in pa["prices_usd_per_1M_tokens"].items():
+            cost = (pa["prompt_tokens"] * pin + pa["completion_tokens"] * pout) / 1e6
+            prec = "n/a" if m["hit_precision"] is None else f"{m['hit_precision']:.1%}"
+            out.append(
+                f"| {r['name']} | {model} | {prec} | ${m['hit_rate'] * cost * 1e6:,.0f} | "
+                f"{round(m['false_hit_rate'] * 1e6):,} |"
             )
     return "\n".join(out) + "\n"
 

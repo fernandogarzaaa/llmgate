@@ -1,0 +1,75 @@
+{
+  "conditions": {
+    "mock_latency_ms": 50.0,
+    "machine": "aarch64",
+    "cpus": 2,
+    "python": "3.12.15",
+    "note": "gateway, mock upstream and load generator share the same host; 1 uvicorn worker each",
+    "loadavg_start": [
+      8.76,
+      6.16,
+      2.97
+    ],
+    "unique_prompt_max_hashing_similarity": 0.2346,
+    "loadavg_end": [
+      9.63,
+      6.74,
+      3.32
+    ]
+  },
+  "direct": {
+    "1": {
+      "n": 200,
+      "errors": 0,
+      "cache_hits": 0,
+      "rps": 17.8,
+      "p50_ms": 55.35,
+      "p95_ms": 61.53,
+      "p99_ms": 66.76,
+      "mean_ms": 56.16,
+      "loadavg_1m": 8.94
+    },
+    "10": {
+      "n": 600,
+      "errors": 0,
+      "cache_hits": 0,
+      "rps": 150.9,
+      "p50_ms": 63.7,
+      "p95_ms": 84.23,
+      "p99_ms": 94.23,
+      "mean_ms": 65.81,
+      "loadavg_1m": 9.03
+    }
+  },
+  "gateway": {
+    "cache_miss": {
+      "1": {
+        "n": 200,
+        "errors": 0,
+        "cache_hits": 0,
+        "rps": 15.7,
+        "p50_ms": 62.89,
+        "p95_ms": 70.57,
+        "p99_ms": 76.99,
+        "mean_ms": 63.42,
+        "loadavg_1m": 9.34,
+        "overhead_p50_ms": 7.54,
+        "overhead_p95_ms": 9.04
+      },
+      "10": {
+        "n": 600,
+        "errors": 0,
+        "cache_hits": 0,
+        "rps": 107.0,
+        "p50_ms": 87.36,
+        "p95_ms": 132.76,
+        "p99_ms": 163.72,
+        "mean_ms": 92.72,
+        "loadavg_1m": 9.63,
+        "overhead_p50_ms": 23.66,
+        "overhead_p95_ms": 48.53
+      },
+      "server_side_overhead_mean_ms": 2.97
+    }
+  }
+}

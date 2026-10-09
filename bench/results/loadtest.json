@@ -1,0 +1,220 @@
+{
+  "conditions": {
+    "mock_latency_ms": 50.0,
+    "machine": "aarch64",
+    "cpus": 2,
+    "python": "3.12.15",
+    "note": "gateway, mock upstream and load generator share the same host; 1 uvicorn worker each",
+    "loadavg_start": [
+      6.06,
+      3.01,
+      1.19
+    ],
+    "unique_prompt_max_hashing_similarity": 0.2346,
+    "loadavg_end": [
+      7.64,
+      5.0,
+      2.26
+    ]
+  },
+  "direct": {
+    "1": {
+      "n": 200,
+      "errors": 0,
+      "cache_hits": 0,
+      "rps": 18.1,
+      "p50_ms": 54.56,
+      "p95_ms": 60.52,
+      "p99_ms": 63.37,
+      "mean_ms": 55.24,
+      "loadavg_1m": 6.21
+    },
+    "10": {
+      "n": 600,
+      "errors": 0,
+      "cache_hits": 0,
+      "rps": 165.4,
+      "p50_ms": 58.11,
+      "p95_ms": 73.67,
+      "p99_ms": 79.55,
+      "mean_ms": 59.95,
+      "loadavg_1m": 6.2
+    }
+  },
+  "gateway": {
+    "passthrough": {
+      "1": {
+        "n": 200,
+        "errors": 0,
+        "cache_hits": 0,
+        "rps": 16.8,
+        "p50_ms": 58.99,
+        "p95_ms": 64.92,
+        "p99_ms": 68.25,
+        "mean_ms": 59.43,
+        "loadavg_1m": 6.59,
+        "overhead_p50_ms": 4.43,
+        "overhead_p95_ms": 4.4
+      },
+      "10": {
+        "n": 600,
+        "errors": 0,
+        "cache_hits": 0,
+        "rps": 146.1,
+        "p50_ms": 64.24,
+        "p95_ms": 88.16,
+        "p99_ms": 127.36,
+        "mean_ms": 67.76,
+        "loadavg_1m": 6.71,
+        "overhead_p50_ms": 6.13,
+        "overhead_p95_ms": 14.49
+      },
+      "server_side_overhead_mean_ms": 1.726
+    },
+    "guard": {
+      "1": {
+        "n": 200,
+        "errors": 0,
+        "cache_hits": 0,
+        "rps": 16.6,
+        "p50_ms": 59.57,
+        "p95_ms": 65.95,
+        "p99_ms": 70.19,
+        "mean_ms": 60.09,
+        "loadavg_1m": 7.13,
+        "overhead_p50_ms": 5.01,
+        "overhead_p95_ms": 5.43
+      },
+      "10": {
+        "n": 600,
+        "errors": 0,
+        "cache_hits": 0,
+        "rps": 127.5,
+        "p50_ms": 72.58,
+        "p95_ms": 113.58,
+        "p99_ms": 148.18,
+        "mean_ms": 77.94,
+        "loadavg_1m": 7.52,
+        "overhead_p50_ms": 14.47,
+        "overhead_p95_ms": 39.91
+      },
+      "server_side_overhead_mean_ms": 1.951
+    },
+    "router": {
+      "1": {
+        "n": 200,
+        "errors": 0,
+        "cache_hits": 0,
+        "rps": 16.5,
+        "p50_ms": 60.1,
+        "p95_ms": 66.21,
+        "p99_ms": 70.16,
+        "mean_ms": 60.55,
+        "loadavg_1m": 7.49,
+        "overhead_p50_ms": 5.54,
+        "overhead_p95_ms": 5.69
+      },
+      "10": {
+        "n": 600,
+        "errors": 0,
+        "cache_hits": 0,
+        "rps": 121.3,
+        "p50_ms": 78.83,
+        "p95_ms": 109.37,
+        "p99_ms": 128.53,
+        "mean_ms": 81.69,
+        "loadavg_1m": 7.69,
+        "overhead_p50_ms": 20.72,
+        "overhead_p95_ms": 35.7
+      },
+      "server_side_overhead_mean_ms": 5.249
+    },
+    "cache_miss": {
+      "1": {
+        "n": 200,
+        "errors": 0,
+        "cache_hits": 0,
+        "rps": 16.2,
+        "p50_ms": 60.71,
+        "p95_ms": 69.29,
+        "p99_ms": 72.96,
+        "mean_ms": 61.53,
+        "loadavg_1m": 7.22,
+        "overhead_p50_ms": 6.15,
+        "overhead_p95_ms": 8.77
+      },
+      "10": {
+        "n": 600,
+        "errors": 0,
+        "cache_hits": 0,
+        "rps": 64.5,
+        "p50_ms": 141.77,
+        "p95_ms": 285.8,
+        "p99_ms": 337.18,
+        "mean_ms": 154.17,
+        "loadavg_1m": 7.11,
+        "overhead_p50_ms": 83.66,
+        "overhead_p95_ms": 212.13
+      },
+      "server_side_overhead_mean_ms": 5.467
+    },
+    "all_on_miss": {
+      "1": {
+        "n": 200,
+        "errors": 0,
+        "cache_hits": 0,
+        "rps": 15.8,
+        "p50_ms": 63.19,
+        "p95_ms": 69.03,
+        "p99_ms": 71.86,
+        "mean_ms": 63.27,
+        "loadavg_1m": 6.79,
+        "overhead_p50_ms": 8.63,
+        "overhead_p95_ms": 8.51
+      },
+      "10": {
+        "n": 600,
+        "errors": 0,
+        "cache_hits": 0,
+        "rps": 59.4,
+        "p50_ms": 157.96,
+        "p95_ms": 316.19,
+        "p99_ms": 385.69,
+        "mean_ms": 166.92,
+        "loadavg_1m": 7.43,
+        "overhead_p50_ms": 99.85,
+        "overhead_p95_ms": 242.52
+      },
+      "server_side_overhead_mean_ms": 18.358
+    },
+    "cache_hit": {
+      "1": {
+        "n": 200,
+        "errors": 0,
+        "cache_hits": 200,
+        "rps": 275.8,
+        "p50_ms": 3.37,
+        "p95_ms": 7.29,
+        "p99_ms": 9.29,
+        "mean_ms": 3.62,
+        "loadavg_1m": 7.44,
+        "overhead_p50_ms": -51.19,
+        "overhead_p95_ms": -53.23
+      },
+      "10": {
+        "n": 600,
+        "errors": 0,
+        "cache_hits": 600,
+        "rps": 312.8,
+        "p50_ms": 25.36,
+        "p95_ms": 71.72,
+        "p99_ms": 106.09,
+        "mean_ms": 31.72,
+        "loadavg_1m": 7.64,
+        "overhead_p50_ms": -32.75,
+        "overhead_p95_ms": -1.95
+      },
+      "server_side_overhead_mean_ms": 2.973
+    }
+  }
+}

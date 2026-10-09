@@ -1,0 +1,124 @@
+------.............................................................................................SS.................................................................................................................................................................................T..............SS...S..S..SS.S..S.................................................................SS...............................................................SSS................................................................................................................. 557 mutants
+testteeth: mutation grade for all selected code
+
+src/llmgate/budget.py
+  <module>                           100.0%    4/4   killed  ok
+  period_start                       100.0%   18/18  killed  ok
+  Budget.__post_init__               100.0%    5/5   killed  ok
+  Budget.unlimited                   100.0%    3/3   killed  ok
+  BudgetTracker._key                 100.0%    1/1   killed  ok
+  BudgetTracker.spent                100.0%    2/2   killed  ok
+  BudgetTracker.check                100.0%    7/7   killed  ok
+  BudgetTracker.add                  100.0%    6/6   killed  ok
+  BudgetTracker.seed                 100.0%    8/8   killed  ok
+  BudgetTracker.since                100.0%    1/1   killed  ok
+  BudgetTracker.prune                100.0%    5/5   killed  ok
+src/llmgate/cache.py
+  <module>                           100.0%    1/1   killed  ok
+  _canon                             100.0%    3/3   killed  ok
+  cache_key                          100.0%    5/5   killed  ok
+  is_cacheable                       100.0%   13/13  killed  ok
+  _last_user_index                   100.0%    8/8   killed  ok
+  semantic_parts                     100.0%   18/18  killed  ok
+  MemoryCache.__init__               100.0%    4/4   killed  ok
+  MemoryCache.__len__                100.0%    1/1   killed  ok
+  MemoryCache.get                    100.0%    5/5   killed  ok
+  MemoryCache.set                    100.0%    9/9   killed  ok
+      ! L139  failure path (retry): retry loop: no test makes an attempt fail and checks the retry / give-up behaviour
+  MemoryCache.ping                   100.0%    2/2   killed  ok
+  RedisCache.get                     100.0%    2/2   killed  ok
+  RedisCache.set                     100.0%    6/6   killed  ok
+  RedisCache.ping                    100.0%    1/1   killed  ok
+  SemanticHit.hit                    100.0%    2/2   killed  ok
+  _Namespace.__init__                  0.0%    0/1   killed  WEAK
+      L197  constant          `0.0` -> `1.0`  [survived]
+  _Namespace._rebuild                  0.0%    0/1   killed  WEAK
+      L202  constant          `0.0` -> `1.0`  [survived]
+  _Namespace.add                      43.8%    7/16  killed  WEAK
+      L208  comparison        `n > len(self._mat)` -> `(n >= len(self._mat))`  [not covered]
+      L209  arithmetic        `2 * len(self._mat)` -> `(2 / len(self._mat))`  [not covered]
+      L209  constant          `2` -> `3`  [not covered]
+      L209  constant          `1` -> `2`  [not covered]
+      L210  arithmetic        `n - 1` -> `(n + 1)`  [not covered]
+      L210  constant          `1` -> `2`  [not covered]
+      L214  comparison        `over > 0` -> `(over >= 0)`  [survived]
+      L218  boolean           `e.expires and (not self._ea...` -> `(e.expires or (not self._ea...`  [survived]
+      ... 1 more surviving
+  _Namespace.best                     75.0%    9/12  killed  WEAK
+      L222  boolean           `self._earliest and self._ea...` -> `(self._earliest or self._ea...`  [survived]
+      L223  boolean           `not e.expires or e.expires ...` -> `(not e.expires and e.expire...`  [survived]
+      L224  remove-call       `self._rebuild()` -> `pass`  [survived]
+  normalize                          100.0%    4/4   killed  ok
+  SemanticCache.__init__             100.0%   15/15  killed  ok
+      ! L272  failure path (external-call): calls `self._db.execute`, `sqlite3.connect` but no test simulates that call failing
+  SemanticCache._namespace           100.0%    4/4   killed  ok
+      ! L284  failure path (external-call): calls `self._db.execute` but no test simulates that call failing
+      ! L288  failure path (retry): retry loop: no test makes an attempt fail and checks the retry / give-up behaviour
+  SemanticCache._vector              100.0%    2/2   killed  ok
+  SemanticCache.lookup               100.0%    6/6   killed  ok
+  SemanticCache.store                100.0%    9/9   killed  ok
+  SemanticCache.size                 100.0%    1/1   killed  ok
+  SemanticCache.close                100.0%    2/2   killed  ok
+src/llmgate/cost.py
+  <module>                           100.0%    2/2   killed  ok
+  Price.__post_init__                100.0%    6/6   killed  ok
+  cost_usd                           100.0%   12/12  killed  ok
+  estimate_tokens                    100.0%    7/7   killed  ok
+  message_text                       100.0%    5/5   killed  ok
+  usage_from_response                100.0%    9/9   killed  ok
+src/llmgate/ratelimit.py
+  <module>                           100.0%    4/4   killed  ok
+  TokenBucket.__init__               100.0%    6/6   killed  ok
+  TokenBucket._refill                100.0%    4/4   killed  ok
+  TokenBucket.tokens                 100.0%    2/2   killed  ok
+  TokenBucket.try_acquire            100.0%   17/17  killed  ok
+  TokenBucket.consume                100.0%    2/2   killed  ok
+  RateLimiter._bucket                100.0%    4/4   killed  ok
+  RateLimiter.check                  100.0%   18/18  killed  ok
+  RateLimiter.settle                 100.0%    5/5   killed  ok
+  RedisRateLimiter.__init__            n/a    0/0   killed
+      ! L164  failure path (external-call): calls `redis.register_script` but no test simulates that call failing
+  RedisRateLimiter._call             100.0%   15/15  killed  ok
+  RedisRateLimiter.check              90.5%   19/21  killed  WEAK
+      L186  constant          `1` -> `2`  [survived]
+      L186  constant          `True` -> `False`  [survived]
+  RedisRateLimiter.settle            100.0%    6/6   killed  ok
+  make_limiter                       100.0%    2/2   killed  ok
+src/llmgate/resilience.py
+  <module>                           100.0%   10/10  killed  ok
+  CircuitBreaker.__init__             86.7%   13/15  killed  WEAK
+      L43   constant          `0.0` -> `1.0`  [survived]
+      L44   constant          `0` -> `1`  [survived]
+  CircuitBreaker._current            100.0%    6/6   killed  ok
+  CircuitBreaker.state               100.0%    1/1   killed  ok
+  CircuitBreaker.failures            100.0%    1/1   killed  ok
+  CircuitBreaker.allow               100.0%   12/12  killed  ok
+  CircuitBreaker.record_success      100.0%    1/1   killed  ok
+  CircuitBreaker.record_failure      100.0%    6/6   killed  ok
+  is_retryable_status                100.0%    5/5   killed  ok
+  RetryPolicy.__post_init__          100.0%    9/9   killed  ok
+  RetryPolicy.delay                  100.0%    6/6   killed  ok
+  RetryPolicy.delays                 100.0%    1/1   killed  ok
+  parse_retry_after                  100.0%    8/8   killed  ok
+src/llmgate/routing.py
+  <module>                            25.0%    1/4   killed  WEAK
+      L50   constant          `False` -> `True`  [survived]
+      L50   constant          `False` -> `True`  [survived]
+      L50   constant          `False` -> `True`  [survived]
+  Rule.__post_init__                 100.0%    7/7   killed  ok
+  Rule.matches                       100.0%   30/30  killed  ok
+  CostRouteConfig.__post_init__      100.0%    6/6   killed  ok
+  RouteDecision.candidates           100.0%    3/3   killed  ok
+  parse_threshold                    100.0%   13/13  killed  ok
+  Router.__init__                    100.0%   12/12  killed  ok
+  Router.public_models               100.0%    3/3   killed  ok
+  Router.needs_score                 100.0%    5/5   killed  ok
+  Router._target                     100.0%    4/4   killed  ok
+  Router.route                       100.0%   22/22  killed  ok
+  rules_from_config                  100.0%    7/7   killed  ok
+
+Mutants: 557  killed: 536  survived: 15  not covered: 6  timeouts: 1
+Failure-path gaps: 5
+Mutation score: 96.2%
+Time: baseline 5.9s, total 1634.9s
+Next: `testteeth suggest` prints an agent-ready brief for each surviving mutant.
