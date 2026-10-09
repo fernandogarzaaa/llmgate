@@ -1,0 +1,47 @@
+# Example production config with real providers. Secrets come from the environment.
+server:
+  port: 8080
+  admin_key: ${LLMGATE_ADMIN_KEY}
+database_url: ${LLMGATE_DATABASE_URL}          # e.g. postgresql://llmgate:...@postgres:5432/llmgate
+redis_url: ${LLMGATE_REDIS_URL}                # shared rate limits + exact cache across replicas
+
+providers:
+  - name: openai
+    type: openai
+    base_url: https://api.openai.com/v1
+    api_key: ${OPENAI_API_KEY}
+    timeout_s: 60
+    max_retries: 2
+  - name: anthropic
+    type: anthropic
+    base_url: https://api.anthropic.com/v1
+    api_key: ${ANTHROPIC_API_KEY}
+  - name: vllm
+    type: local
+    base_url: ${VLLM_URL:-http://vllm:8000}/v1
+    timeout_s: 120
+
+models:
+  - {name: gpt-4o, provider: openai, input_per_1m: 2.50, output_per_1m: 10.00, fallbacks: [claude-sonnet]}
+  - {name: gpt-4o-mini, provider: openai, input_per_1m: 0.15, output_per_1m: 0.60, fallbacks: [llama-3.1-8b]}
+  - {name: claude-sonnet, provider: anthropic, upstream_model: claude-sonnet-4-5, input_per_1m: 3.00, output_per_1m: 15.00, fallbacks: [gpt-4o]}
+  - {name: llama-3.1-8b, provider: vllm, upstream_model: meta-llama/Llama-3.1-8B-Instruct}
+
+routing:
+  default_model: gpt-4o-mini
+  costroute: {enabled: true, alias: auto, router: auto, threshold: 0.5, strong: gpt-4o, weak: gpt-4o-mini}
+
+guard: {enabled: true, input: block, output: redact, stream_output: buffer, required: true}
+
+cache:
+  scope: tenant
+  only_deterministic: true
+  exact: {enabled: true, backend: redis, ttl_s: 86400}
+  semantic: {enabled: true, backend: sqlite, sqlite_path: /data/semantic.db, threshold: 0.95, embedder: fastembed}
+
+tenancy:
+  require_auth: true
+  default_rpm: 120
+  default_tpm: 200000
+
+tracing: {enabled: true, exporter: otlp, endpoint: "${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-http://otel-collector:4318/v1/traces}"}

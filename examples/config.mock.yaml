@@ -1,0 +1,66 @@
+# Quickstart config: every provider points at the mock upstream (`llmgate mock-upstream`).
+# No API keys needed. Prices are illustrative list prices (USD per 1M tokens, see README).
+server:
+  port: ${LLMGATE_PORT:-8080}
+  admin_key: ${LLMGATE_ADMIN_KEY:-dev-admin-key}
+database_url: ${LLMGATE_DATABASE_URL:-sqlite:///llmgate-demo.db}
+redis_url: ${LLMGATE_REDIS_URL:-}
+
+providers:
+  - name: openai
+    type: openai
+    base_url: ${MOCK_URL:-http://127.0.0.1:9000}/v1
+    api_key: mock
+    timeout_s: 30
+    max_retries: 2
+    breaker: {failure_threshold: 5, recovery_s: 15}
+  - name: anthropic
+    type: anthropic
+    base_url: ${MOCK_URL:-http://127.0.0.1:9000}/v1
+    api_key: mock
+  - name: local
+    type: local            # llama.cpp llama-server / vLLM / Ollama (OpenAI-compatible)
+    base_url: ${MOCK_URL:-http://127.0.0.1:9000}/v1
+
+models:
+  - {name: gpt-4o, provider: openai, input_per_1m: 2.50, output_per_1m: 10.00, fallbacks: [claude-sonnet]}
+  - {name: gpt-4o-mini, provider: openai, input_per_1m: 0.15, output_per_1m: 0.60, fallbacks: [llama-3.1-8b]}
+  - {name: claude-sonnet, provider: anthropic, upstream_model: claude-sonnet-4-5, input_per_1m: 3.00, output_per_1m: 15.00}
+  - {name: llama-3.1-8b, provider: local, input_per_1m: 0, output_per_1m: 0}
+
+routing:
+  default_model: gpt-4o-mini
+  costroute:
+    enabled: true
+    alias: auto            # model="auto" -> costroute decides strong vs weak
+    router: heuristic      # costroute router spec; "lora" needs costroute[lora]
+    threshold: 0.5
+    strong: gpt-4o
+    weak: gpt-4o-mini
+  rules:
+    - name: very-long-prompts-to-strong
+      when: {model: auto, min_chars: 8000}
+      route_to: gpt-4o
+    - name: pin-local-by-header
+      when: {header: {x-llmgate-pin: local}}
+      route_to: llama-3.1-8b
+
+guard:
+  enabled: true
+  input: block
+  output: redact
+  stream_output: post_scan
+
+cache:
+  scope: tenant
+  exact: {enabled: true, backend: memory, ttl_s: 3600}
+  semantic: {enabled: true, backend: memory, threshold: 0.95, embedder: hashing}
+
+tenancy:
+  require_auth: true
+  bootstrap:
+    - {tenant: demo, api_key: "${LLMGATE_DEMO_KEY:-lg-demo-key-change-me}", rpm: 600, tpm: 200000, budget_usd: 5}
+
+tracing:
+  enabled: ${LLMGATE_TRACING:-false}
+  exporter: otlp
