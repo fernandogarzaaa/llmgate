@@ -1,0 +1,219 @@
+{
+  "dataset": "GLUE QQP validation (nyu-mll/glue, config qqp), first 4000 pairs, shuffled seed 13, split 50/50",
+  "n_dev": 2000,
+  "n_test": 2000,
+  "duplicate_share_test": 0.3525,
+  "pricing_assumption": {
+    "prices_usd_per_1M_tokens": {
+      "gpt-4o-mini": [
+        0.15,
+        0.6
+      ],
+      "gpt-4o": [
+        2.5,
+        10.0
+      ],
+      "claude-sonnet": [
+        3.0,
+        15.0
+      ]
+    },
+    "prompt_tokens": 500,
+    "completion_tokens": 250
+  },
+  "target_hit_precision_on_dev": 0.9,
+  "embedders": {
+    "hashing": {
+      "name": "hashing",
+      "embed_ms_per_text": 0.202,
+      "chosen_threshold": 0.965,
+      "test_at_chosen": {
+        "threshold": 0.965,
+        "hit_rate": 0.0055,
+        "correct_hit_rate": 0.0045,
+        "false_hit_rate": 0.001,
+        "hit_precision": 0.8182,
+        "duplicate_recall": 0.0128,
+        "false_hit_rate_on_non_duplicates": 0.0039
+      },
+      "test_sweep": [
+        {
+          "threshold": 0.8,
+          "hit_rate": 0.1155,
+          "correct_hit_rate": 0.051,
+          "false_hit_rate": 0.0645,
+          "hit_precision": 0.4416,
+          "duplicate_recall": 0.1447,
+          "false_hit_rate_on_non_duplicates": 0.095
+        },
+        {
+          "threshold": 0.85,
+          "hit_rate": 0.0795,
+          "correct_hit_rate": 0.0325,
+          "false_hit_rate": 0.047,
+          "hit_precision": 0.4088,
+          "duplicate_recall": 0.0922,
+          "false_hit_rate_on_non_duplicates": 0.071
+        },
+        {
+          "threshold": 0.9,
+          "hit_rate": 0.043,
+          "correct_hit_rate": 0.017,
+          "false_hit_rate": 0.026,
+          "hit_precision": 0.3953,
+          "duplicate_recall": 0.0482,
+          "false_hit_rate_on_non_duplicates": 0.0394
+        },
+        {
+          "threshold": 0.95,
+          "hit_rate": 0.009,
+          "correct_hit_rate": 0.006,
+          "false_hit_rate": 0.003,
+          "hit_precision": 0.6667,
+          "duplicate_recall": 0.017,
+          "false_hit_rate_on_non_duplicates": 0.0069
+        },
+        {
+          "threshold": 0.97,
+          "hit_rate": 0.005,
+          "correct_hit_rate": 0.0045,
+          "false_hit_rate": 0.0005,
+          "hit_precision": 0.9,
+          "duplicate_recall": 0.0128,
+          "false_hit_rate_on_non_duplicates": 0.0031
+        },
+        {
+          "threshold": 0.98,
+          "hit_rate": 0.0045,
+          "correct_hit_rate": 0.004,
+          "false_hit_rate": 0.0005,
+          "hit_precision": 0.8889,
+          "duplicate_recall": 0.0113,
+          "false_hit_rate_on_non_duplicates": 0.0031
+        },
+        {
+          "threshold": 0.99,
+          "hit_rate": 0.0045,
+          "correct_hit_rate": 0.004,
+          "false_hit_rate": 0.0005,
+          "hit_precision": 0.8889,
+          "duplicate_recall": 0.0113,
+          "false_hit_rate_on_non_duplicates": 0.0031
+        }
+      ],
+      "dollars_at_chosen": {
+        "gpt-4o-mini": {
+          "cost_per_request_usd": 0.000225,
+          "saved_per_1M_requests_usd": 1.24,
+          "wrong_answers_per_1M_requests": 1000
+        },
+        "gpt-4o": {
+          "cost_per_request_usd": 0.00375,
+          "saved_per_1M_requests_usd": 20.62,
+          "wrong_answers_per_1M_requests": 1000
+        },
+        "claude-sonnet": {
+          "cost_per_request_usd": 0.00525,
+          "saved_per_1M_requests_usd": 28.88,
+          "wrong_answers_per_1M_requests": 1000
+        }
+      }
+    },
+    "fastembed": {
+      "name": "fastembed:BAAI/bge-small-en-v1.5",
+      "embed_ms_per_text": 66.207,
+      "chosen_threshold": 0.97,
+      "test_at_chosen": {
+        "threshold": 0.97,
+        "hit_rate": 0.067,
+        "correct_hit_rate": 0.059,
+        "false_hit_rate": 0.008,
+        "hit_precision": 0.8806,
+        "duplicate_recall": 0.1674,
+        "false_hit_rate_on_non_duplicates": 0.0116
+      },
+      "test_sweep": [
+        {
+          "threshold": 0.8,
+          "hit_rate": 0.591,
+          "correct_hit_rate": 0.3045,
+          "false_hit_rate": 0.2865,
+          "hit_precision": 0.5152,
+          "duplicate_recall": 0.8638,
+          "false_hit_rate_on_non_duplicates": 0.3946
+        },
+        {
+          "threshold": 0.85,
+          "hit_rate": 0.445,
+          "correct_hit_rate": 0.267,
+          "false_hit_rate": 0.178,
+          "hit_precision": 0.6,
+          "duplicate_recall": 0.7574,
+          "false_hit_rate_on_non_duplicates": 0.2394
+        },
+        {
+          "threshold": 0.9,
+          "hit_rate": 0.296,
+          "correct_hit_rate": 0.2095,
+          "false_hit_rate": 0.0865,
+          "hit_precision": 0.7078,
+          "duplicate_recall": 0.5943,
+          "false_hit_rate_on_non_duplicates": 0.1143
+        },
+        {
+          "threshold": 0.95,
+          "hit_rate": 0.125,
+          "correct_hit_rate": 0.1015,
+          "false_hit_rate": 0.0235,
+          "hit_precision": 0.812,
+          "duplicate_recall": 0.2879,
+          "false_hit_rate_on_non_duplicates": 0.0324
+        },
+        {
+          "threshold": 0.97,
+          "hit_rate": 0.067,
+          "correct_hit_rate": 0.059,
+          "false_hit_rate": 0.008,
+          "hit_precision": 0.8806,
+          "duplicate_recall": 0.1674,
+          "false_hit_rate_on_non_duplicates": 0.0116
+        },
+        {
+          "threshold": 0.98,
+          "hit_rate": 0.044,
+          "correct_hit_rate": 0.0395,
+          "false_hit_rate": 0.0045,
+          "hit_precision": 0.8977,
+          "duplicate_recall": 0.1121,
+          "false_hit_rate_on_non_duplicates": 0.0069
+        },
+        {
+          "threshold": 0.99,
+          "hit_rate": 0.024,
+          "correct_hit_rate": 0.0225,
+          "false_hit_rate": 0.0015,
+          "hit_precision": 0.9375,
+          "duplicate_recall": 0.0638,
+          "false_hit_rate_on_non_duplicates": 0.0039
+        }
+      ],
+      "dollars_at_chosen": {
+        "gpt-4o-mini": {
+          "cost_per_request_usd": 0.000225,
+          "saved_per_1M_requests_usd": 15.08,
+          "wrong_answers_per_1M_requests": 8000
+        },
+        "gpt-4o": {
+          "cost_per_request_usd": 0.00375,
+          "saved_per_1M_requests_usd": 251.25,
+          "wrong_answers_per_1M_requests": 8000
+        },
+        "claude-sonnet": {
+          "cost_per_request_usd": 0.00525,
+          "saved_per_1M_requests_usd": 351.75,
+          "wrong_answers_per_1M_requests": 8000
+        }
+      }
+    }
+  }
+}

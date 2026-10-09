@@ -84,12 +84,37 @@ def embed_all(emb: Any, texts: List[str], batch: int = 64) -> Tuple[np.ndarray, 
     return m, dt / len(texts) * 1000
 
 
-def simulate(store: np.ndarray, queries: np.ndarray, labels: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    """Return (best similarity, whether the best match is a correct hit) per query."""
+def _norm(t: str) -> str:
+    return " ".join(t.lower().split())
+
+
+def embed_cached(emb: Any, name: str, split: str, side: str, texts: List[str]) -> Tuple[np.ndarray, float]:
+    """Embeddings are cached under bench/data (not committed); the timing is from the first run."""
+    base = os.path.join(HERE, "data", f"emb_{name}_{split}_{side}_{len(texts)}")
+    if os.path.exists(base + ".npy") and os.path.exists(base + ".json"):
+        return np.load(base + ".npy"), json.load(open(base + ".json"))["ms_per_text"]
+    m, ms = embed_all(emb, texts)
+    np.save(base + ".npy", m)
+    json.dump({"ms_per_text": ms}, open(base + ".json", "w"))
+    return m, ms
+
+
+def simulate(
+    store: np.ndarray, queries: np.ndarray, labels: np.ndarray, q1: List[str], q2: List[str]
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Return (best similarity, whether serving the best match is correct) per query.
+
+    Correct = the matched stored question is the query's own labelled-duplicate partner (or has
+    exactly the same text as that partner, since QQP repeats questions), or the matched stored
+    question is textually identical to the query itself.
+    """
     sims = queries @ store.T
     best = sims.argmax(axis=1)
     best_sim = sims[np.arange(len(queries)), best]
-    correct = (best == np.arange(len(queries))) & (labels == 1)
+    n1 = [_norm(t) for t in q1]
+    correct = np.array(
+        [(labels[i] == 1 and (b == i or n1[b] == n1[i])) or n1[b] == _norm(q2[i]) for i, b in enumerate(best)]
+    )
     return best_sim, correct
 
 
@@ -134,7 +159,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pairs", type=int, default=4000)
     ap.add_argument("--embedders", default="hashing,fastembed")
-    ap.add_argument("--target-precision", type=float, default=0.95)
+    ap.add_argument("--target-precision", type=float, default=0.90)
     ap.add_argument("--seed", type=int, default=13)
     ap.add_argument("--out", default=os.path.join(HERE, "results", "semantic_cache.json"))
     args = ap.parse_args()
@@ -168,15 +193,16 @@ def main() -> int:
         res: Dict[str, Any] = {"name": emb.name}
         per_split = {}
         for split, data in splits.items():
-            q1, q1_ms = embed_all(emb, [r["q1"] for r in data])
-            q2, _ = embed_all(emb, [r["q2"] for r in data])
+            t1, t2 = [r["q1"] for r in data], [r["q2"] for r in data]
+            q1, q1_ms = embed_cached(emb, name, split, "q1", t1)
+            q2, _ = embed_cached(emb, name, split, "q2", t2)
             labels = np.array([r["label"] for r in data])
-            per_split[split] = simulate(q1, q2, labels) + (labels,)
+            per_split[split] = (*simulate(q1, q2, labels, t1, t2), labels)
             res.setdefault("embed_ms_per_text", round(q1_ms, 3))
         thr = choose_threshold(*per_split["dev"], args.target_precision)
         res["chosen_threshold"] = thr
         res["test_at_chosen"] = metrics_at(*per_split["test"], thr)
-        res["test_sweep"] = [metrics_at(*per_split["test"], t) for t in (0.80, 0.85, 0.90, 0.95, 0.98)]
+        res["test_sweep"] = [metrics_at(*per_split["test"], t) for t in (0.80, 0.85, 0.90, 0.95, 0.97, 0.98, 0.99)]
         m = res["test_at_chosen"]
         res["dollars_at_chosen"] = dollars(m["hit_rate"], m["false_hit_rate"])
         report["embedders"][name] = res

@@ -37,7 +37,7 @@ cache:
   scope: tenant
   only_deterministic: true
   exact: {enabled: true, backend: redis, ttl_s: 86400}
-  semantic: {enabled: true, backend: sqlite, sqlite_path: /data/semantic.db, threshold: 0.95, embedder: fastembed}
+  semantic: {enabled: true, backend: sqlite, sqlite_path: /data/semantic.db, threshold: 0.98, embedder: fastembed}
 
 tenancy:
   require_auth: true
