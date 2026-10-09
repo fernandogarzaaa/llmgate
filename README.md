@@ -269,7 +269,9 @@ python bench/loadtest.py && python bench/render_results.py > bench/results/RESUL
 ```
 
 Redis and Postgres tests run when `LLMGATE_TEST_REDIS_URL` / `LLMGATE_TEST_DATABASE_URL` are set;
-Redis rate limiting is otherwise exercised through `fakeredis` with Lua.
+Redis rate limiting is otherwise exercised through `fakeredis` with Lua. The guardrail tests and the
+costroute and injectguard adapter tests are skipped when those libraries are not installed; a
+separate test then checks that the gateway runs with guardrails disabled.
 
 ## Limitations and what is untested
 
