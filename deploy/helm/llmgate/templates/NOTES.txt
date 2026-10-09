@@ -1,0 +1,7 @@
+llmgate is deployed as {{ include "llmgate.fullname" . }}.
+
+  kubectl port-forward svc/{{ include "llmgate.fullname" . }} 8080:{{ .Values.service.port }}
+  curl localhost:8080/healthz
+
+Create a tenant key from inside a pod:
+  kubectl exec deploy/{{ include "llmgate.fullname" . }} -- llmgate keys create --tenant demo --create-tenant --config /etc/llmgate/config.yaml

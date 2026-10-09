@@ -1,7 +1,4 @@
-import pytest
 from conftest import KEY, base_config, flaky_app, sse_events
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 
 from llmgate.mock_upstream import create_mock_app
 
@@ -77,11 +74,11 @@ async def test_unknown_model_404(gw):
 
 
 async def test_invalid_body(gw):
-    r = await gw.client.post("/v1/chat/completions", content=b"{not json",
-                             headers={"authorization": f"Bearer {KEY}"})
+    r = await gw.client.post("/v1/chat/completions", content=b"{not json", headers={"authorization": f"Bearer {KEY}"})
     assert r.status_code == 400
-    r = await gw.client.post("/v1/chat/completions", json={"model": "small", "messages": []},
-                             headers={"authorization": f"Bearer {KEY}"})
+    r = await gw.client.post(
+        "/v1/chat/completions", json={"model": "small", "messages": []}, headers={"authorization": f"Bearer {KEY}"}
+    )
     assert r.status_code == 400
 
 
@@ -183,10 +180,26 @@ async def test_budget_is_seeded_from_database(make_harness):
     t = h.gw.store.get_tenant("acme")
     from datetime import datetime, timezone
 
-    h.gw.store.record_usage([{"ts": datetime.now(timezone.utc), "request_id": "x", "tenant_id": t.id,
-                              "key_id": None, "model": "big", "provider": "primary", "route": "direct",
-                              "cache": "miss", "status": 200, "prompt_tokens": 0, "completion_tokens": 0,
-                              "cost_usd": 5.0, "saved_usd": 0.0, "latency_ms": 1.0}])
+    h.gw.store.record_usage(
+        [
+            {
+                "ts": datetime.now(timezone.utc),
+                "request_id": "x",
+                "tenant_id": t.id,
+                "key_id": None,
+                "model": "big",
+                "provider": "primary",
+                "route": "direct",
+                "cache": "miss",
+                "status": 200,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "cost_usd": 5.0,
+                "saved_usd": 0.0,
+                "latency_ms": 1.0,
+            }
+        ]
+    )
     await h.gw.refresh_budget(t)
     assert (await h.chat("second")).status_code == 402
 
@@ -216,8 +229,9 @@ async def test_cache_is_scoped_per_tenant(gw):
 
 
 async def test_semantic_cache(make_harness):
-    h = await make_harness(cache={"exact": {"enabled": False},
-                                  "semantic": {"enabled": True, "threshold": 0.9, "embedder": "hashing"}})
+    h = await make_harness(
+        cache={"exact": {"enabled": False}, "semantic": {"enabled": True, "threshold": 0.9, "embedder": "hashing"}}
+    )
     await h.chat("What is the capital city of France?")
     r = await h.chat("what is the capital city of france")
     assert r.headers["x-llmgate-cache"] == "semantic"
@@ -308,8 +322,11 @@ async def test_output_guard_redacts_pii(gw):
 async def test_stream_buffer_mode_redacts(make_harness):
     h = await make_harness(guard={"enabled": True, "output": "redact", "stream_output": "buffer"})
     r = await h.chat("mail bob@example.org", stream=True)
-    text = "".join(e["choices"][0]["delta"].get("content", "") for e in sse_events(r.text)[:-1]
-                   if isinstance(e, dict) and e.get("choices"))
+    text = "".join(
+        e["choices"][0]["delta"].get("content", "")
+        for e in sse_events(r.text)[:-1]
+        if isinstance(e, dict) and e.get("choices")
+    )
     assert "bob@example.org" not in text and "[EMAIL]" in text
 
 

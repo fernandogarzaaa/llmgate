@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
 import math
 import re
 import zlib
@@ -33,10 +34,10 @@ class HashingEmbedder:
     def _features(self, text: str) -> List[str]:
         words = _WORD.findall(text.lower())
         feats = [f"w:{w}" for w in words]
-        feats += [f"b:{a}_{b}" for a, b in zip(words, words[1:])]
+        feats += [f"b:{a}_{b}" for a, b in itertools.pairwise(words)]
         for w in words:
             padded = f"#{w}#"
-            feats += [f"c:{padded[i:i + 3]}" for i in range(len(padded) - 2)]
+            feats += [f"c:{padded[i : i + 3]}" for i in range(len(padded) - 2)]
         return feats
 
     def embed_one(self, text: str) -> np.ndarray:
@@ -85,8 +86,7 @@ class OpenAIEmbedder:
         self._headers = {"authorization": f"Bearer {api_key}"} if api_key else {}
 
     async def __call__(self, texts: Sequence[str]) -> List[np.ndarray]:
-        r = await self._client.post(self._url, json={"model": self._model, "input": list(texts)},
-                                    headers=self._headers)
+        r = await self._client.post(self._url, json={"model": self._model, "input": list(texts)}, headers=self._headers)
         r.raise_for_status()
         data = sorted(r.json()["data"], key=lambda d: d["index"])
         return [np.asarray(d["embedding"], dtype=np.float32) for d in data]

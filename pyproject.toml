@@ -51,7 +51,7 @@ dev = [
   "llmgate[redis,otel]",
   "pytest>=8,<10",
   "pytest-asyncio>=0.23,<2",
-  "fakeredis>=2.20,<3",
+  "fakeredis[lua]>=2.20,<3",
   "ruff>=0.6",
   "mypy>=1.10",
   "types-PyYAML>=6",
@@ -107,6 +107,7 @@ ignore = ["UP006", "UP007", "UP035", "UP045", "B008", "SIM105", "RUF012", "RUF04
 
 [tool.mypy]
 python_version = "3.10"
+plugins = ["pydantic.mypy"]
 files = ["src/llmgate"]
 strict_optional = true
 warn_unused_ignores = true
@@ -115,7 +116,7 @@ disallow_untyped_defs = true
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["costroute", "costroute.*", "injectguard", "injectguard.*", "fastembed", "fastembed.*", "fakeredis", "redis", "redis.*"]
+module = ["costroute", "costroute.*", "injectguard", "injectguard.*", "fastembed", "fastembed.*", "fakeredis", "redis", "redis.*", "opentelemetry.exporter.*"]
 ignore_missing_imports = true
 
 [tool.testteeth]

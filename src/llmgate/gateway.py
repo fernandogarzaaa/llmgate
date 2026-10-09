@@ -49,7 +49,7 @@ class UsageWriter:
         self.store = store
         self.flush_s = flush_s
         self.max_batch = max_batch
-        self.queue: "asyncio.Queue[Dict[str, Any]]" = asyncio.Queue()
+        self.queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
         self.pending: Dict[str, float] = {}  # tenant id -> cost queued but not yet written
         self._task: Optional[asyncio.Task[None]] = None
 
@@ -94,8 +94,13 @@ class UsageWriter:
 
 
 class Gateway:
-    def __init__(self, cfg: GatewayConfig, store: Optional[Store] = None, redis: Any = None,
-                 http_client: Optional[httpx.AsyncClient] = None) -> None:
+    def __init__(
+        self,
+        cfg: GatewayConfig,
+        store: Optional[Store] = None,
+        redis: Any = None,
+        http_client: Optional[httpx.AsyncClient] = None,
+    ) -> None:
         self.cfg = cfg
         self.metrics = Metrics()
         self.store = store or Store(cfg.database_url)
@@ -105,7 +110,8 @@ class Gateway:
 
             self.redis = aioredis.from_url(cfg.redis_url)
         self.http = http_client or httpx.AsyncClient(
-            limits=httpx.Limits(max_connections=1000, max_keepalive_connections=200))
+            limits=httpx.Limits(max_connections=1000, max_keepalive_connections=200)
+        )
         self.providers: Dict[str, Provider] = {p.name: make_provider(p, self.http) for p in cfg.providers}
         self.targets: Dict[str, ModelTarget] = {
             m.name: ModelTarget(m.name, m.provider, m.upstream_model or m.name, Price(m.input_per_1m, m.output_per_1m))
@@ -120,8 +126,13 @@ class Gateway:
         if cr.enabled:
             self.scorer, self.scorer_source = load_scorer(cr.router)
             crc = CostRouteConfig(cr.alias, cr.strong, cr.weak, cr.threshold)
-        self.router = Router({m.name: m.fallbacks for m in cfg.models}, rules_from_config(cfg.routing.rules),
-                             crc, self.scorer, cfg.routing.default_model)
+        self.router = Router(
+            {m.name: m.fallbacks for m in cfg.models},
+            rules_from_config(cfg.routing.rules),
+            crc,
+            self.scorer,
+            cfg.routing.default_model,
+        )
 
         self.guard: Optional[GuardBackend] = load_guard(cfg.guard)
         self.limiter = make_limiter(self.redis)
@@ -135,16 +146,27 @@ class Gateway:
         self.semantic: Optional[SemanticCache] = None
         self.embedder_name = ""
         if sc.enabled:
-            emb = make_embedder(sc.embedder, self.http, model=sc.embedder_model, base_url=sc.embedder_base_url,
-                                api_key=sc.embedder_api_key)
+            emb = make_embedder(
+                sc.embedder,
+                self.http,
+                model=sc.embedder_model,
+                base_url=sc.embedder_base_url,
+                api_key=sc.embedder_api_key,
+            )
             self.embedder_name = emb.name
-            self.semantic = SemanticCache(emb, sc.threshold, sc.max_entries_per_namespace, sc.ttl_s,
-                                          sc.sqlite_path if sc.backend == "sqlite" else None)
+            self.semantic = SemanticCache(
+                emb,
+                sc.threshold,
+                sc.max_entries_per_namespace,
+                sc.ttl_s,
+                sc.sqlite_path if sc.backend == "sqlite" else None,
+            )
 
         self.writer = UsageWriter(self.store)
         self._keys: Dict[str, Tuple[float, Optional[Tuple[KeyRecord, Tenant]]]] = {}
         self._known_tenants: Dict[str, Tenant] = {}
         self._refresh_task: Optional[asyncio.Task[None]] = None
+        self._bg: set[asyncio.Future[None]] = set()
         self.tracing = setup_tracing(cfg.tracing)
 
     # ------------------------------------------------------------------ lifecycle
@@ -230,9 +252,21 @@ class Gateway:
         if prov is not None:
             self.metrics.breaker.labels(a.provider).set(STATE_VALUE[prov.breaker.state])
 
-    def account(self, *, auth: AuthContext, request_id: str, model: str, provider: str, route: str, cache: str,
-                status: int, prompt_tokens: int, completion_tokens: int, latency_s: float,
-                est_tokens: int) -> Tuple[float, float]:
+    def account(
+        self,
+        *,
+        auth: AuthContext,
+        request_id: str,
+        model: str,
+        provider: str,
+        route: str,
+        cache: str,
+        status: int,
+        prompt_tokens: int,
+        completion_tokens: int,
+        latency_s: float,
+        est_tokens: int,
+    ) -> Tuple[float, float]:
         """Record cost, tokens, budget spend, TPM correction and the usage row. Returns (cost, saved)."""
         price = self.targets[model].price if model in self.targets else Price()
         full = cost_usd(prompt_tokens, completion_tokens, price)
@@ -246,16 +280,33 @@ class Gateway:
             m.cost.labels(tname, model).inc(cost)
             if cost > 0:
                 self.budgets.add(auth.tenant.id, auth.budget, cost)
-            asyncio.ensure_future(self.limiter.settle(auth.tenant.id, self.limits_for(auth.tenant), est_tokens,
-                                                      prompt_tokens + completion_tokens))
+            task = asyncio.ensure_future(
+                self.limiter.settle(
+                    auth.tenant.id, self.limits_for(auth.tenant), est_tokens, prompt_tokens + completion_tokens
+                )
+            )
+            self._bg.add(task)
+            task.add_done_callback(self._bg.discard)
         else:
             m.saved.labels(tname, model).inc(saved)
-        self.writer.put({
-            "ts": datetime.now(timezone.utc), "request_id": request_id, "tenant_id": auth.tenant.id,
-            "key_id": auth.key_id, "model": model, "provider": provider, "route": route, "cache": cache,
-            "status": status, "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens,
-            "cost_usd": cost, "saved_usd": saved, "latency_ms": latency_s * 1000,
-        })
+        self.writer.put(
+            {
+                "ts": datetime.now(timezone.utc),
+                "request_id": request_id,
+                "tenant_id": auth.tenant.id,
+                "key_id": auth.key_id,
+                "model": model,
+                "provider": provider,
+                "route": route,
+                "cache": cache,
+                "status": status,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "cost_usd": cost,
+                "saved_usd": saved,
+                "latency_ms": latency_s * 1000,
+            }
+        )
         return cost, saved
 
     # ---------------------------------------------------------------- health
@@ -275,18 +326,24 @@ class Gateway:
         states = {n: p.breaker.state for n, p in self.providers.items()}
         checks["providers"] = states
         ready = all(v == "ok" for k, v in checks.items() if k != "providers") and any(
-            s != "open" for s in states.values())
+            s != "open" for s in states.values()
+        )
         return {"ready": ready, "checks": checks}
 
     def components(self) -> Dict[str, Any]:
         cr = self.cfg.routing.costroute
         return {
             "guard": self.guard.name if self.guard is not None else "disabled",
-            "router": {"rules": len(self.router.rules),
-                       "costroute": f"{cr.router} via {self.scorer_source}" if cr.enabled else "disabled"},
-            "cache": {"exact": self.cfg.cache.exact.backend if self.exact is not None else "disabled",
-                      "semantic": f"{self.cfg.cache.semantic.backend}/{self.embedder_name}"
-                      if self.semantic is not None else "disabled"},
+            "router": {
+                "rules": len(self.router.rules),
+                "costroute": f"{cr.router} via {self.scorer_source}" if cr.enabled else "disabled",
+            },
+            "cache": {
+                "exact": self.cfg.cache.exact.backend if self.exact is not None else "disabled",
+                "semantic": f"{self.cfg.cache.semantic.backend}/{self.embedder_name}"
+                if self.semantic is not None
+                else "disabled",
+            },
             "rate_limiter": "redis" if self.redis is not None else "memory",
             "database": self.store.url.split(":", 1)[0],
             "tracing": self.tracing,

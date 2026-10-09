@@ -44,8 +44,9 @@ class OpenAIProvider(Provider):
         return payload
 
     async def open_stream(self, body: Dict[str, Any]) -> AsyncIterator[bytes]:
-        req = self.client.build_request("POST", self._url(), json=self._stream_payload(body),
-                                        headers=self._headers(), timeout=self.timeout)
+        req = self.client.build_request(
+            "POST", self._url(), json=self._stream_payload(body), headers=self._headers(), timeout=self.timeout
+        )
         try:
             resp = await self.client.send(req, stream=True)
         except httpx.HTTPError as exc:

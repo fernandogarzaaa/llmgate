@@ -14,8 +14,15 @@ from ..resilience import CircuitBreaker, RetryPolicy, is_retryable_status
 class ProviderError(Exception):
     """An upstream failure. ``retryable`` errors are retried and failed over."""
 
-    def __init__(self, status: int, message: str, retryable: bool, kind: str = "http",
-                 retry_after: Optional[str] = None, body: Any = None) -> None:
+    def __init__(
+        self,
+        status: int,
+        message: str,
+        retryable: bool,
+        kind: str = "http",
+        retry_after: Optional[str] = None,
+        body: Any = None,
+    ) -> None:
         super().__init__(message)
         self.status = status
         self.message = message
@@ -33,8 +40,14 @@ def error_from_response(status: int, content: bytes, headers: Optional[httpx.Hea
     msg = ""
     if isinstance(body, dict) and isinstance(body.get("error"), dict):
         msg = str(body["error"].get("message", ""))
-    return ProviderError(status, msg or f"upstream returned HTTP {status}", is_retryable_status(status),
-                         "http", headers.get("retry-after") if headers is not None else None, body)
+    return ProviderError(
+        status,
+        msg or f"upstream returned HTTP {status}",
+        is_retryable_status(status),
+        "http",
+        headers.get("retry-after") if headers is not None else None,
+        body,
+    )
 
 
 def error_from_exception(exc: Exception) -> ProviderError:
@@ -82,8 +95,7 @@ class Provider:
         self.name = cfg.name
         self.client = client
         self.timeout = httpx.Timeout(cfg.timeout_s, connect=cfg.connect_timeout_s)
-        self.breaker = CircuitBreaker(cfg.breaker.failure_threshold, cfg.breaker.recovery_s,
-                                      cfg.breaker.half_open_max)
+        self.breaker = CircuitBreaker(cfg.breaker.failure_threshold, cfg.breaker.recovery_s, cfg.breaker.half_open_max)
         self.retry = RetryPolicy(cfg.max_retries, cfg.retry_base_s, cfg.retry_max_s)
 
     async def complete(self, body: Dict[str, Any]) -> Dict[str, Any]:

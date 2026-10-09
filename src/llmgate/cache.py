@@ -29,9 +29,26 @@ import numpy as np
 
 # Request fields that can change the response. Everything else is ignored for keying.
 KEY_FIELDS = (
-    "model", "messages", "temperature", "top_p", "max_tokens", "max_completion_tokens", "n", "stop",
-    "presence_penalty", "frequency_penalty", "logit_bias", "logprobs", "top_logprobs", "seed",
-    "tools", "tool_choice", "functions", "function_call", "response_format", "parallel_tool_calls",
+    "model",
+    "messages",
+    "temperature",
+    "top_p",
+    "max_tokens",
+    "max_completion_tokens",
+    "n",
+    "stop",
+    "presence_penalty",
+    "frequency_penalty",
+    "logit_bias",
+    "logprobs",
+    "top_logprobs",
+    "seed",
+    "tools",
+    "tool_choice",
+    "functions",
+    "function_call",
+    "response_format",
+    "parallel_tool_calls",
 )
 _PARAM_FIELDS = tuple(f for f in KEY_FIELDS if f not in ("model", "messages"))
 
@@ -95,7 +112,7 @@ class MemoryCache:
             raise ValueError("max_entries must be >= 1")
         self.max_entries = max_entries
         self._clock = clock
-        self._data: "OrderedDict[str, Tuple[float, Any]]" = OrderedDict()
+        self._data: OrderedDict[str, Tuple[float, Any]] = OrderedDict()
         self._lock = threading.Lock()
 
     def __len__(self) -> int:
@@ -249,9 +266,10 @@ class SemanticCache:
                         "SELECT text, vec, payload, expires FROM semantic_cache WHERE namespace = ? ORDER BY rowid",
                         (ns,),
                     ).fetchall()
-                    for text, blob, payload, expires in rows[-self.max_entries:]:
+                    for text, blob, payload, expires in rows[-self.max_entries :]:
                         space.entries.append(
-                            _Entry(np.frombuffer(blob, dtype=np.float32).copy(), text, json.loads(payload), expires))
+                            _Entry(np.frombuffer(blob, dtype=np.float32).copy(), text, json.loads(payload), expires)
+                        )
                 self._ns[ns] = space
             return space
 

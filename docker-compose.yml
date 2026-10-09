@@ -1,0 +1,69 @@
+# Full local stack: gateway + Redis + Postgres + Prometheus + Grafana + a mock upstream.
+#   docker compose up --build
+#   curl localhost:8080/v1/chat/completions -H "authorization: Bearer lg-demo-key-change-me" \
+#        -d '{"model":"auto","messages":[{"role":"user","content":"hi"}]}'
+# Grafana: http://localhost:3000 (anonymous viewer; dashboard "llmgate"), Prometheus: http://localhost:9090
+services:
+  mock:
+    build: .
+    command: ["mock-upstream", "--host", "0.0.0.0", "--port", "9000", "--latency-ms", "50", "--name", "mock"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/healthz', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: llmgate
+      POSTGRES_PASSWORD: llmgate
+      POSTGRES_DB: llmgate
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U llmgate"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  gateway:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      MOCK_URL: http://mock:9000
+      LLMGATE_DATABASE_URL: postgresql://llmgate:llmgate@postgres:5432/llmgate
+      LLMGATE_REDIS_URL: redis://redis:6379/0
+      LLMGATE_ADMIN_KEY: ${LLMGATE_ADMIN_KEY:-dev-admin-key}
+      LLMGATE_DEMO_KEY: ${LLMGATE_DEMO_KEY:-lg-demo-key-change-me}
+    depends_on:
+      mock: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes: ["./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["9090:9090"]
+    depends_on: [gateway]
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["3000:3000"]
+    depends_on: [prometheus]
+
+volumes:
+  pgdata: {}

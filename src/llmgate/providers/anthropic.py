@@ -76,11 +76,13 @@ def from_anthropic(data: Dict[str, Any], model: str) -> Dict[str, Any]:
         "object": "chat.completion",
         "created": int(time.time()),
         "model": model,
-        "choices": [{
-            "index": 0,
-            "message": {"role": "assistant", "content": _text(data.get("content"))},
-            "finish_reason": STOP_REASONS.get(str(data.get("stop_reason")), "stop"),
-        }],
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": _text(data.get("content"))},
+                "finish_reason": STOP_REASONS.get(str(data.get("stop_reason")), "stop"),
+            }
+        ],
         "usage": {"prompt_tokens": pt, "completion_tokens": ct, "total_tokens": pt + ct},
     }
 
@@ -97,8 +99,15 @@ class StreamTranslator:
         self.finish: Optional[str] = None
 
     def _chunk(self, delta: Dict[str, Any], finish: Optional[str] = None) -> bytes:
-        return sse({"id": self.id, "object": "chat.completion.chunk", "created": self.created, "model": self.model,
-                    "choices": [{"index": 0, "delta": delta, "finish_reason": finish}]})
+        return sse(
+            {
+                "id": self.id,
+                "object": "chat.completion.chunk",
+                "created": self.created,
+                "model": self.model,
+                "choices": [{"index": 0, "delta": delta, "finish_reason": finish}],
+            }
+        )
 
     def handle(self, event: str, data: str) -> List[bytes]:
         try:
@@ -119,15 +128,35 @@ class StreamTranslator:
             self.finish = STOP_REASONS.get(str((ev.get("delta") or {}).get("stop_reason")), "stop")
             return []
         if typ == "message_stop":
-            usage = {"prompt_tokens": self.prompt_tokens, "completion_tokens": self.completion_tokens,
-                     "total_tokens": self.prompt_tokens + self.completion_tokens}
-            final = sse({"id": self.id, "object": "chat.completion.chunk", "created": self.created,
-                         "model": self.model, "choices": [], "usage": usage})
+            usage = {
+                "prompt_tokens": self.prompt_tokens,
+                "completion_tokens": self.completion_tokens,
+                "total_tokens": self.prompt_tokens + self.completion_tokens,
+            }
+            final = sse(
+                {
+                    "id": self.id,
+                    "object": "chat.completion.chunk",
+                    "created": self.created,
+                    "model": self.model,
+                    "choices": [],
+                    "usage": usage,
+                }
+            )
             return [self._chunk({}, self.finish or "stop"), final, SSE_DONE]
         if typ == "error":
             err = ev.get("error") or {}
-            return [sse({"error": {"message": err.get("message", "upstream error"),
-                                   "type": err.get("type", "upstream_error")}}), SSE_DONE]
+            return [
+                sse(
+                    {
+                        "error": {
+                            "message": err.get("message", "upstream error"),
+                            "type": err.get("type", "upstream_error"),
+                        }
+                    }
+                ),
+                SSE_DONE,
+            ]
         return []
 
 
@@ -145,8 +174,9 @@ class AnthropicProvider(Provider):
 
     async def complete(self, body: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            r = await self.client.post(self._url(), json=to_anthropic(body), headers=self._headers(),
-                                       timeout=self.timeout)
+            r = await self.client.post(
+                self._url(), json=to_anthropic(body), headers=self._headers(), timeout=self.timeout
+            )
         except httpx.HTTPError as exc:
             raise error_from_exception(exc) from None
         if r.status_code >= 400:
@@ -159,8 +189,9 @@ class AnthropicProvider(Provider):
 
     async def open_stream(self, body: Dict[str, Any]) -> AsyncIterator[bytes]:
         payload = {**to_anthropic(body), "stream": True}
-        req = self.client.build_request("POST", self._url(), json=payload, headers=self._headers(),
-                                        timeout=self.timeout)
+        req = self.client.build_request(
+            "POST", self._url(), json=payload, headers=self._headers(), timeout=self.timeout
+        )
         try:
             resp = await self.client.send(req, stream=True)
         except httpx.HTTPError as exc:

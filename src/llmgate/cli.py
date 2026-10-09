@@ -59,8 +59,14 @@ def cmd_serve(args: argparse.Namespace) -> int:
     logging.basicConfig(level=cfg.server.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s %(message)s")
     logging.getLogger("httpx").setLevel(logging.WARNING)
     app = create_app(cfg)
-    uvicorn.run(app, host=args.host or cfg.server.host, port=args.port or cfg.server.port,
-                log_level=cfg.server.log_level, access_log=args.access_log, workers=1)
+    uvicorn.run(
+        app,
+        host=args.host or cfg.server.host,
+        port=args.port or cfg.server.port,
+        log_level=cfg.server.log_level,
+        access_log=args.access_log,
+        workers=1,
+    )
     return 0
 
 
@@ -90,8 +96,14 @@ def cmd_tenants(args: argparse.Namespace) -> int:
         _print_table([t.as_dict()], args.json)
     elif args.action == "update":
         allowed = [m for m in args.models.split(",") if m] if args.models is not None else None
-        t = st.update_tenant(args.name, rpm=args.rpm, tpm=args.tpm, budget_usd=args.budget,
-                             budget_period=args.period, allowed_models=allowed)
+        t = st.update_tenant(
+            args.name,
+            rpm=args.rpm,
+            tpm=args.tpm,
+            budget_usd=args.budget,
+            budget_period=args.period,
+            allowed_models=allowed,
+        )
         _print_table([t.as_dict()], args.json)
     else:
         _print_table([t.as_dict() for t in st.list_tenants()], args.json)
@@ -118,9 +130,17 @@ def cmd_keys(args: argparse.Namespace) -> int:
             return 1
         print(f"revoked {args.key_id}")
     else:
-        rows = [{"id": k.id, "tenant_id": k.tenant_id, "name": k.name, "prefix": k.prefix + "...",
-                 "revoked": k.revoked, "created_at": k.created_at.isoformat(timespec="seconds")}
-                for k in st.list_keys(args.tenant)]
+        rows = [
+            {
+                "id": k.id,
+                "tenant_id": k.tenant_id,
+                "name": k.name,
+                "prefix": k.prefix + "...",
+                "revoked": k.revoked,
+                "created_at": k.created_at.isoformat(timespec="seconds"),
+            }
+            for k in st.list_keys(args.tenant)
+        ]
         _print_table(rows, args.json)
     return 0
 
@@ -130,8 +150,10 @@ def cmd_usage(args: argparse.Namespace) -> int:
     rows = st.usage_summary(parse_since(args.since), [b for b in args.by.split(",") if b], args.tenant)
     _print_table(rows, args.json)
     if not args.json and rows:
-        print(f"\ntotal cost ${sum(r['cost_usd'] for r in rows):.6f}, saved by cache "
-              f"${sum(r['saved_usd'] for r in rows):.6f}, requests {sum(r['requests'] for r in rows)}")
+        print(
+            f"\ntotal cost ${sum(r['cost_usd'] for r in rows):.6f}, saved by cache "
+            f"${sum(r['saved_usd'] for r in rows):.6f}, requests {sum(r['requests'] for r in rows)}"
+        )
     return 0
 
 

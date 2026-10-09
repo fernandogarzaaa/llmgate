@@ -92,7 +92,8 @@ class CircuitBreaker:
         self._trials = 0
 
 
-RETRYABLE_STATUS = frozenset({408, 409, 425, 429, 500, 502, 503, 504, 529})
+# Plus every 5xx (500-599, and vendor codes such as Anthropic's 529 "overloaded").
+RETRYABLE_STATUS = frozenset({408, 409, 425, 429})
 
 
 def is_retryable_status(status: int) -> bool:

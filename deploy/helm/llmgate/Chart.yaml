@@ -1,0 +1,11 @@
+apiVersion: v2
+name: llmgate
+description: OpenAI-compatible LLM gateway with routing, guardrails, caching, multi-tenancy and observability
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords: [llm, gateway, openai, proxy]
+home: https://github.com/fernandogarzaaa/llmgate
+maintainers:
+  - name: Fernando Garza
+    email: fernandogarzaaa@gmail.com

@@ -55,9 +55,7 @@ def message_text(messages: Iterable[Mapping[str, Any]]) -> str:
     return "\n".join(parts)
 
 
-def usage_from_response(
-    payload: Mapping[str, Any], prompt_text: str, completion_text: str
-) -> Dict[str, Any]:
+def usage_from_response(payload: Mapping[str, Any], prompt_text: str, completion_text: str) -> Dict[str, Any]:
     """Prompt/completion token counts from an OpenAI ``usage`` object, or estimates.
 
     Returns ``{"prompt_tokens", "completion_tokens", "estimated"}``. A usage

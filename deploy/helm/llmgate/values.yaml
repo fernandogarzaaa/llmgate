@@ -1,0 +1,92 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/fernandogarzaaa/llmgate
+  tag: ""            # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile: {type: RuntimeDefault}
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: {drop: [ALL]}
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+resources:
+  requests: {cpu: 250m, memory: 256Mi}
+  limits: {cpu: "1", memory: 512Mi}
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+serviceMonitor:
+  enabled: false     # requires the Prometheus Operator CRDs
+  interval: 15s
+  labels: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Secret values (rendered into a Secret unless existingSecret is set). Keys become env vars.
+existingSecret: ""
+secrets:
+  LLMGATE_ADMIN_KEY: "change-me"
+  LLMGATE_DATABASE_URL: "postgresql://llmgate:llmgate@postgres:5432/llmgate"
+  LLMGATE_REDIS_URL: "redis://redis:6379/0"
+  OPENAI_API_KEY: ""
+  ANTHROPIC_API_KEY: ""
+
+extraEnv: []
+
+# The gateway config (see examples/config.production.yaml). ${VAR} references are resolved from env.
+config:
+  server:
+    port: 8080
+    admin_key: ${LLMGATE_ADMIN_KEY}
+  database_url: ${LLMGATE_DATABASE_URL}
+  redis_url: ${LLMGATE_REDIS_URL}
+  providers:
+    - name: openai
+      type: openai
+      base_url: https://api.openai.com/v1
+      api_key: ${OPENAI_API_KEY:-}
+    - name: anthropic
+      type: anthropic
+      base_url: https://api.anthropic.com/v1
+      api_key: ${ANTHROPIC_API_KEY:-}
+  models:
+    - {name: gpt-4o, provider: openai, input_per_1m: 2.5, output_per_1m: 10, fallbacks: [claude-sonnet]}
+    - {name: gpt-4o-mini, provider: openai, input_per_1m: 0.15, output_per_1m: 0.6}
+    - {name: claude-sonnet, provider: anthropic, upstream_model: claude-sonnet-4-5, input_per_1m: 3, output_per_1m: 15}
+  routing:
+    default_model: gpt-4o-mini
+    costroute: {enabled: true, alias: auto, router: heuristic, threshold: 0.5, strong: gpt-4o, weak: gpt-4o-mini}
+  guard: {enabled: true, input: block, output: redact}
+  cache:
+    exact: {enabled: true, backend: redis, ttl_s: 3600}
+    semantic: {enabled: false}
+  tenancy: {require_auth: true}

@@ -64,7 +64,7 @@ class Rule:
             return False
         if self.max_chars is not None and n > self.max_chars:
             return False
-        if self.contains is not None and not getattr(self, "_rx").search(ctx.prompt):
+        if self.contains is not None and not self._rx.search(ctx.prompt):
             return False
         if self.header:
             lower = {k.lower(): v for k, v in ctx.headers.items()}
@@ -157,14 +157,16 @@ class Router:
         """Whether :meth:`route` will call the scorer (so callers can run it off the event loop)."""
         return self.costroute is not None and self._target(ctx)[0] == self.costroute.alias
 
-    def _target(self, ctx: RouteContext) -> "tuple[str, Optional[Rule]]":
+    def _target(self, ctx: RouteContext) -> tuple[str, Optional[Rule]]:
         for rule in self.rules:
             if rule.matches(ctx):
                 return rule.route_to, rule
         target = ctx.requested_model or (self.default_model or "")
         return target, None
 
-    def route(self, ctx: RouteContext, threshold: Optional[float] = None, score: Optional[float] = None) -> RouteDecision:
+    def route(
+        self, ctx: RouteContext, threshold: Optional[float] = None, score: Optional[float] = None
+    ) -> RouteDecision:
         """Pick the model for ``ctx``. ``score`` may be pre-computed by the caller."""
         target, rule = self._target(ctx)
         strategy, reason = ("rule", rule.name) if rule is not None else ("direct", "requested")
@@ -177,11 +179,13 @@ class Router:
             thr = cr.threshold if threshold is None else threshold
             model = cr.strong if score >= thr else cr.weak
             other = cr.weak if model == cr.strong else cr.strong
-            fallbacks = rule.fallbacks if (rule is not None and rule.fallbacks is not None) else [
-                *self.models[model], other]
+            fallbacks = (
+                rule.fallbacks if (rule is not None and rule.fallbacks is not None) else [*self.models[model], other]
+            )
             why = f"score={score:.4f} threshold={thr:.2f}"
-            return RouteDecision(model, list(fallbacks), "costroute",
-                                 f"{reason}; {why}" if rule is not None else why, score)
+            return RouteDecision(
+                model, list(fallbacks), "costroute", f"{reason}; {why}" if rule is not None else why, score
+            )
         if target not in self.models:
             raise RoutingError(f"model {target!r} is not available on this gateway")
         fallbacks = rule.fallbacks if (rule is not None and rule.fallbacks is not None) else self.models[target]
@@ -197,6 +201,12 @@ def rules_from_config(items: Sequence[Mapping[str, Any]]) -> List[Rule]:
             raise ValueError(f"rule #{i}: unknown condition(s) {sorted(unknown)}")
         if "route_to" not in it:
             raise ValueError(f"rule #{i}: missing route_to")
-        out.append(Rule(name=str(it.get("name", f"rule-{i}")), route_to=str(it["route_to"]),
-                        fallbacks=it.get("fallbacks"), **when))
+        out.append(
+            Rule(
+                name=str(it.get("name", f"rule-{i}")),
+                route_to=str(it["route_to"]),
+                fallbacks=it.get("fallbacks"),
+                **when,
+            )
+        )
     return out

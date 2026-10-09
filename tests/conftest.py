@@ -1,4 +1,3 @@
-import asyncio
 import json
 from typing import Any, Dict, Optional
 
@@ -58,8 +57,15 @@ def base_config(**over: Any) -> Dict[str, Any]:
         "server": {"admin_key": "admin-secret"},
         "database_url": "sqlite://",
         "providers": [
-            {"name": "primary", "type": "openai", "base_url": "http://primary/v1", "api_key": "k",
-             "max_retries": 1, "retry_base_s": 0, "breaker": {"failure_threshold": 3, "recovery_s": 60}},
+            {
+                "name": "primary",
+                "type": "openai",
+                "base_url": "http://primary/v1",
+                "api_key": "k",
+                "max_retries": 1,
+                "retry_base_s": 0,
+                "breaker": {"failure_threshold": 3, "recovery_s": 60},
+            },
             {"name": "backup", "type": "openai", "base_url": "http://backup/v1", "max_retries": 0},
             {"name": "claude", "type": "anthropic", "base_url": "http://claude/v1", "api_key": "k"},
             {"name": "local", "type": "local", "base_url": "http://local/v1"},
@@ -68,13 +74,26 @@ def base_config(**over: Any) -> Dict[str, Any]:
             {"name": "big", "provider": "primary", "input_per_1m": 10, "output_per_1m": 30, "fallbacks": ["spare"]},
             {"name": "small", "provider": "primary", "input_per_1m": 1, "output_per_1m": 2},
             {"name": "spare", "provider": "backup", "input_per_1m": 5, "output_per_1m": 5},
-            {"name": "sonnet", "provider": "claude", "upstream_model": "claude-x", "input_per_1m": 3,
-             "output_per_1m": 15},
+            {
+                "name": "sonnet",
+                "provider": "claude",
+                "upstream_model": "claude-x",
+                "input_per_1m": 3,
+                "output_per_1m": 15,
+            },
             {"name": "llama", "provider": "local"},
         ],
-        "routing": {"costroute": {"enabled": True, "alias": "auto", "router": "heuristic", "threshold": 0.5,
-                                  "strong": "big", "weak": "small"},
-                    "rules": [{"name": "pin", "when": {"header": {"x-pin": "llama"}}, "route_to": "llama"}]},
+        "routing": {
+            "costroute": {
+                "enabled": True,
+                "alias": "auto",
+                "router": "heuristic",
+                "threshold": 0.5,
+                "strong": "big",
+                "weak": "small",
+            },
+            "rules": [{"name": "pin", "when": {"header": {"x-pin": "llama"}}, "route_to": "llama"}],
+        },
         "guard": {"enabled": True, "input": "block", "output": "redact"},
         "cache": {"exact": {"enabled": True}, "semantic": {"enabled": False}},
         "tenancy": {"bootstrap": [{"tenant": "acme", "api_key": KEY}], "budget_refresh_s": 3600},
@@ -99,9 +118,11 @@ class Harness:
         self.cfg = load_config(data=cfg_dict, env={})
         http = httpx.AsyncClient(transport=HostRouter(self.upstreams))
         self.gw = Gateway(self.cfg, store=Store("sqlite://"), http_client=http)
+
         # no retry sleeps in tests
         async def nosleep(_s):
             return None
+
         self.gw.dispatcher._sleep = nosleep
         self.app = create_app(self.cfg, self.gw)
         self.client = httpx.AsyncClient(transport=httpx.ASGITransport(app=self.app), base_url="http://gw")

@@ -40,8 +40,9 @@ def _tokens(text: str) -> int:
     return max(1, len(text) // 4) if text else 0
 
 
-def create_mock_app(name: str = "mock", latency_ms: float = 50.0, fail_rate: float = 0.0,
-                    stream_chunks: int = 4, seed: int = 0) -> FastAPI:
+def create_mock_app(
+    name: str = "mock", latency_ms: float = 50.0, fail_rate: float = 0.0, stream_chunks: int = 4, seed: int = 0
+) -> FastAPI:
     app = FastAPI(title=f"llmgate mock upstream ({name})")
     rng = random.Random(seed)
     emb = HashingEmbedder(256)
@@ -57,8 +58,11 @@ def create_mock_app(name: str = "mock", latency_ms: float = 50.0, fail_rate: flo
             await asyncio.sleep(3600)
         if fail.isdigit():
             code = int(fail)
-            return JSONResponse({"error": {"message": f"mock failure {code}", "type": "mock_error"}},
-                                status_code=code, headers={"retry-after": "0"} if code == 429 else None)
+            return JSONResponse(
+                {"error": {"message": f"mock failure {code}", "type": "mock_error"}},
+                status_code=code,
+                headers={"retry-after": "0"} if code == 429 else None,
+            )
         return None
 
     @app.get("/healthz")
@@ -83,25 +87,40 @@ def create_mock_app(name: str = "mock", latency_ms: float = 50.0, fail_rate: flo
                 n = max(1, stream_chunks)
                 step = max(1, -(-len(text) // n))
                 base = {"id": cid, "object": "chat.completion.chunk", "created": created, "model": model}
-                yield ("data: " + json.dumps({**base, "choices": [{"index": 0, "delta": {"role": "assistant"},
-                                                                   "finish_reason": None}]}) + "\n\n").encode()
+                yield (
+                    "data: "
+                    + json.dumps(
+                        {**base, "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}]}
+                    )
+                    + "\n\n"
+                ).encode()
                 for i in range(0, len(text), step):
-                    ch = {**base, "choices": [{"index": 0, "delta": {"content": text[i:i + step]},
-                                               "finish_reason": None}]}
+                    ch = {
+                        **base,
+                        "choices": [{"index": 0, "delta": {"content": text[i : i + step]}, "finish_reason": None}],
+                    }
                     yield ("data: " + json.dumps(ch) + "\n\n").encode()
-                yield ("data: " + json.dumps({**base, "choices": [{"index": 0, "delta": {},
-                                                                   "finish_reason": "stop"}]}) + "\n\n").encode()
+                yield (
+                    "data: "
+                    + json.dumps({**base, "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]})
+                    + "\n\n"
+                ).encode()
                 if include_usage:
                     u = {"prompt_tokens": pt, "completion_tokens": ct, "total_tokens": pt + ct}
                     yield ("data: " + json.dumps({**base, "choices": [], "usage": u}) + "\n\n").encode()
                 yield b"data: [DONE]\n\n"
 
             return StreamingResponse(gen(), media_type="text/event-stream")
-        return JSONResponse({
-            "id": cid, "object": "chat.completion", "created": created, "model": model,
-            "choices": [{"index": 0, "message": {"role": "assistant", "content": text}, "finish_reason": "stop"}],
-            "usage": {"prompt_tokens": pt, "completion_tokens": ct, "total_tokens": pt + ct},
-        })
+        return JSONResponse(
+            {
+                "id": cid,
+                "object": "chat.completion",
+                "created": created,
+                "model": model,
+                "choices": [{"index": 0, "message": {"role": "assistant", "content": text}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": pt, "completion_tokens": ct, "total_tokens": pt + ct},
+            }
+        )
 
     @app.post("/v1/messages")
     async def messages(request: Request) -> Response:
@@ -115,11 +134,22 @@ def create_mock_app(name: str = "mock", latency_ms: float = 50.0, fail_rate: flo
         pt, ct = _tokens(prompt), _tokens(text)
         mid = "msg_" + uuid.uuid4().hex[:12]
         if body.get("stream"):
+
             async def gen() -> AsyncIterator[bytes]:
                 def ev(t: str, d: Dict[str, Any]) -> bytes:
                     return f"event: {t}\ndata: {json.dumps({'type': t, **d})}\n\n".encode()
-                yield ev("message_start", {"message": {"id": mid, "model": model, "role": "assistant",
-                                                       "usage": {"input_tokens": pt, "output_tokens": 0}}})
+
+                yield ev(
+                    "message_start",
+                    {
+                        "message": {
+                            "id": mid,
+                            "model": model,
+                            "role": "assistant",
+                            "usage": {"input_tokens": pt, "output_tokens": 0},
+                        }
+                    },
+                )
                 yield ev("content_block_start", {"index": 0, "content_block": {"type": "text", "text": ""}})
                 half = len(text) // 2
                 for piece in (text[:half], text[half:]):
@@ -129,9 +159,17 @@ def create_mock_app(name: str = "mock", latency_ms: float = 50.0, fail_rate: flo
                 yield ev("message_stop", {})
 
             return StreamingResponse(gen(), media_type="text/event-stream")
-        return JSONResponse({"id": mid, "type": "message", "role": "assistant", "model": model,
-                             "content": [{"type": "text", "text": text}], "stop_reason": "end_turn",
-                             "usage": {"input_tokens": pt, "output_tokens": ct}})
+        return JSONResponse(
+            {
+                "id": mid,
+                "type": "message",
+                "role": "assistant",
+                "model": model,
+                "content": [{"type": "text", "text": text}],
+                "stop_reason": "end_turn",
+                "usage": {"input_tokens": pt, "output_tokens": ct},
+            }
+        )
 
     @app.post("/v1/embeddings")
     async def embeddings(request: Request) -> Response:
@@ -139,8 +177,12 @@ def create_mock_app(name: str = "mock", latency_ms: float = 50.0, fail_rate: flo
         inp = body.get("input", [])
         texts = [inp] if isinstance(inp, str) else list(inp)
         vecs = await emb(texts)
-        return JSONResponse({"object": "list", "model": body.get("model", "mock-embed"),
-                             "data": [{"object": "embedding", "index": i, "embedding": v.tolist()}
-                                      for i, v in enumerate(vecs)]})
+        return JSONResponse(
+            {
+                "object": "list",
+                "model": body.get("model", "mock-embed"),
+                "data": [{"object": "embedding", "index": i, "embedding": v.tolist()} for i, v in enumerate(vecs)],
+            }
+        )
 
     return app

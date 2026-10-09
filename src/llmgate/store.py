@@ -34,7 +34,8 @@ from sqlalchemy.pool import StaticPool
 metadata = MetaData()
 
 tenants = Table(
-    "tenants", metadata,
+    "tenants",
+    metadata,
     Column("id", String(64), primary_key=True),
     Column("name", String(128), nullable=False, unique=True),
     Column("rpm", Integer, nullable=False, default=0),
@@ -46,7 +47,8 @@ tenants = Table(
 )
 
 api_keys = Table(
-    "api_keys", metadata,
+    "api_keys",
+    metadata,
     Column("id", String(64), primary_key=True),
     Column("tenant_id", String(64), ForeignKey("tenants.id"), nullable=False),
     Column("name", String(128), nullable=False, default=""),
@@ -57,7 +59,8 @@ api_keys = Table(
 )
 
 usage = Table(
-    "usage", metadata,
+    "usage",
+    metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
     Column("ts", DateTime(timezone=True), nullable=False),
     Column("request_id", String(64), nullable=False),
@@ -106,8 +109,15 @@ class Tenant:
     allowed_models: Optional[List[str]] = None
 
     def as_dict(self) -> Dict[str, Any]:
-        return {"id": self.id, "name": self.name, "rpm": self.rpm, "tpm": self.tpm, "budget_usd": self.budget_usd,
-                "budget_period": self.budget_period, "allowed_models": self.allowed_models}
+        return {
+            "id": self.id,
+            "name": self.name,
+            "rpm": self.rpm,
+            "tpm": self.tpm,
+            "budget_usd": self.budget_usd,
+            "budget_period": self.budget_period,
+            "allowed_models": self.allowed_models,
+        }
 
 
 @dataclass
@@ -128,9 +138,9 @@ def _tenant(row: Any) -> Tenant:
 def normalize_url(url: str) -> str:
     """Accept ``postgres://`` / ``postgresql://`` and use the psycopg 3 driver."""
     if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
+        url = "postgresql://" + url[len("postgres://") :]
     if url.startswith("postgresql://"):
-        url = "postgresql+psycopg://" + url[len("postgresql://"):]
+        url = "postgresql+psycopg://" + url[len("postgresql://") :]
     return url
 
 
@@ -152,22 +162,46 @@ class Store:
         return True
 
     # ------------------------------------------------------------------ tenants
-    def create_tenant(self, name: str, rpm: int = 0, tpm: int = 0, budget_usd: float = 0.0,
-                      budget_period: str = "monthly", allowed_models: Optional[Sequence[str]] = None) -> Tenant:
+    def create_tenant(
+        self,
+        name: str,
+        rpm: int = 0,
+        tpm: int = 0,
+        budget_usd: float = 0.0,
+        budget_period: str = "monthly",
+        allowed_models: Optional[Sequence[str]] = None,
+    ) -> Tenant:
         if budget_period not in ("daily", "monthly", "total"):
             raise ValueError("budget_period must be daily, monthly or total")
-        t = Tenant(uuid.uuid4().hex[:16], name, rpm, tpm, budget_usd, budget_period,
-                   list(allowed_models) if allowed_models else None)
+        t = Tenant(
+            uuid.uuid4().hex[:16],
+            name,
+            rpm,
+            tpm,
+            budget_usd,
+            budget_period,
+            list(allowed_models) if allowed_models else None,
+        )
         with self.engine.begin() as c:
-            c.execute(tenants.insert().values(
-                id=t.id, name=name, rpm=rpm, tpm=tpm, budget_usd=budget_usd, budget_period=budget_period,
-                allowed_models=json.dumps(t.allowed_models) if t.allowed_models else None, created_at=_now()))
+            c.execute(
+                tenants.insert().values(
+                    id=t.id,
+                    name=name,
+                    rpm=rpm,
+                    tpm=tpm,
+                    budget_usd=budget_usd,
+                    budget_period=budget_period,
+                    allowed_models=json.dumps(t.allowed_models) if t.allowed_models else None,
+                    created_at=_now(),
+                )
+            )
         return t
 
     def get_tenant(self, id_or_name: str) -> Optional[Tenant]:
         with self.engine.connect() as c:
-            row = c.execute(select(tenants).where(
-                (tenants.c.id == id_or_name) | (tenants.c.name == id_or_name))).first()
+            row = c.execute(
+                select(tenants).where((tenants.c.id == id_or_name) | (tenants.c.name == id_or_name))
+            ).first()
         return _tenant(row) if row else None
 
     def list_tenants(self) -> List[Tenant]:
@@ -190,7 +224,7 @@ class Store:
         return t2
 
     # --------------------------------------------------------------------- keys
-    def create_key(self, tenant: str, name: str = "", key: Optional[str] = None) -> "tuple[str, KeyRecord]":
+    def create_key(self, tenant: str, name: str = "", key: Optional[str] = None) -> tuple[str, KeyRecord]:
         """Create a key for ``tenant`` (id or name). Returns ``(plaintext, record)``; only the hash is stored."""
         t = self.get_tenant(tenant)
         if t is None:
@@ -198,15 +232,26 @@ class Store:
         plain = key or new_key()
         rec = KeyRecord(uuid.uuid4().hex[:16], t.id, name, plain[:10], False, _now())
         with self.engine.begin() as c:
-            c.execute(api_keys.insert().values(id=rec.id, tenant_id=t.id, name=name, prefix=rec.prefix,
-                                               key_hash=hash_key(plain), revoked=False, created_at=rec.created_at))
+            c.execute(
+                api_keys.insert().values(
+                    id=rec.id,
+                    tenant_id=t.id,
+                    name=name,
+                    prefix=rec.prefix,
+                    key_hash=hash_key(plain),
+                    revoked=False,
+                    created_at=rec.created_at,
+                )
+            )
         return plain, rec
 
-    def resolve_key(self, plain: str) -> Optional["tuple[KeyRecord, Tenant]"]:
+    def resolve_key(self, plain: str) -> Optional[tuple[KeyRecord, Tenant]]:
         with self.engine.connect() as c:
-            row = c.execute(select(api_keys, tenants.c.name.label("tenant_name"))
-                            .join(tenants, tenants.c.id == api_keys.c.tenant_id)
-                            .where(api_keys.c.key_hash == hash_key(plain))).first()
+            row = c.execute(
+                select(api_keys, tenants.c.name.label("tenant_name"))
+                .join(tenants, tenants.c.id == api_keys.c.tenant_id)
+                .where(api_keys.c.key_hash == hash_key(plain))
+            ).first()
             if row is None or row.revoked:
                 return None
             trow = c.execute(select(tenants).where(tenants.c.id == row.tenant_id)).first()
@@ -225,8 +270,9 @@ class Store:
                 return []
             q = q.where(api_keys.c.tenant_id == t.id)
         with self.engine.connect() as c:
-            return [KeyRecord(r.id, r.tenant_id, r.name, r.prefix, r.revoked, _aware(r.created_at))
-                    for r in c.execute(q)]
+            return [
+                KeyRecord(r.id, r.tenant_id, r.name, r.prefix, r.revoked, _aware(r.created_at)) for r in c.execute(q)
+            ]
 
     def revoke_key(self, key_id: str) -> bool:
         with self.engine.begin() as c:
@@ -241,25 +287,40 @@ class Store:
 
     def tenant_spend(self, tenant_id: str, since: datetime) -> float:
         with self.engine.connect() as c:
-            v = c.execute(select(func.coalesce(func.sum(usage.c.cost_usd), 0.0))
-                          .where(usage.c.tenant_id == tenant_id, usage.c.ts >= since)).scalar()
+            v = c.execute(
+                select(func.coalesce(func.sum(usage.c.cost_usd), 0.0)).where(
+                    usage.c.tenant_id == tenant_id, usage.c.ts >= since
+                )
+            ).scalar()
         return float(v or 0.0)
 
-    def usage_summary(self, since: Optional[datetime] = None, by: Sequence[str] = ("tenant", "model"),
-                      tenant: Optional[str] = None) -> List[Dict[str, Any]]:
-        cols = {"tenant": tenants.c.name.label("tenant"), "model": usage.c.model, "provider": usage.c.provider,
-                "cache": usage.c.cache, "route": usage.c.route}
+    def usage_summary(
+        self, since: Optional[datetime] = None, by: Sequence[str] = ("tenant", "model"), tenant: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        cols = {
+            "tenant": tenants.c.name.label("tenant"),
+            "model": usage.c.model,
+            "provider": usage.c.provider,
+            "cache": usage.c.cache,
+            "route": usage.c.route,
+        }
         unknown = set(by) - set(cols)
         if unknown:
             raise ValueError(f"cannot group by {sorted(unknown)}; choose from {sorted(cols)}")
         group = [cols[b] for b in by]
-        q = (select(*group, func.count().label("requests"),
-                    func.sum(usage.c.prompt_tokens).label("prompt_tokens"),
-                    func.sum(usage.c.completion_tokens).label("completion_tokens"),
-                    func.sum(usage.c.cost_usd).label("cost_usd"),
-                    func.sum(usage.c.saved_usd).label("saved_usd"))
-             .select_from(usage.outerjoin(tenants, tenants.c.id == usage.c.tenant_id))
-             .group_by(*group).order_by(*group))
+        q = (
+            select(
+                *group,
+                func.count().label("requests"),
+                func.sum(usage.c.prompt_tokens).label("prompt_tokens"),
+                func.sum(usage.c.completion_tokens).label("completion_tokens"),
+                func.sum(usage.c.cost_usd).label("cost_usd"),
+                func.sum(usage.c.saved_usd).label("saved_usd"),
+            )
+            .select_from(usage.outerjoin(tenants, tenants.c.id == usage.c.tenant_id))
+            .group_by(*group)
+            .order_by(*group)
+        )
         if since is not None:
             q = q.where(usage.c.ts >= since)
         if tenant:

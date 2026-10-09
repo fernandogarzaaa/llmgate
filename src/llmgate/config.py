@@ -23,13 +23,15 @@ class ConfigError(ValueError):
 def interpolate(value: Any, env: Mapping[str, str]) -> Any:
     """Replace ``${VAR}`` and ``${VAR:-default}`` in every string of a nested structure."""
     if isinstance(value, str):
-        def sub(m: "re.Match[str]") -> str:
+
+        def sub(m: re.Match[str]) -> str:
             name, default = m.group(1), m.group(2)
             if name in env and env[name] != "":
                 return env[name]
             if default is not None:
                 return default
             raise ConfigError(f"environment variable {name} is not set (use ${{{name}:-default}})")
+
         return _VAR.sub(sub, value)
     if isinstance(value, list):
         return [interpolate(v, env) for v in value]
@@ -175,7 +177,7 @@ class GatewayConfig(_Model):
         return v or None
 
     @model_validator(mode="after")
-    def _check_refs(self) -> "GatewayConfig":
+    def _check_refs(self) -> GatewayConfig:
         pnames = [p.name for p in self.providers]
         if len(set(pnames)) != len(pnames):
             raise ValueError("provider names must be unique")
@@ -216,8 +218,9 @@ ENV_OVERRIDES = {
 }
 
 
-def load_config(path: Optional[str] = None, env: Optional[Mapping[str, str]] = None,
-                data: Optional[Dict[str, Any]] = None) -> GatewayConfig:
+def load_config(
+    path: Optional[str] = None, env: Optional[Mapping[str, str]] = None, data: Optional[Dict[str, Any]] = None
+) -> GatewayConfig:
     env = dict(os.environ if env is None else env)
     if data is None:
         path = path or env.get("LLMGATE_CONFIG")

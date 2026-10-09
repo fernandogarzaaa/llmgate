@@ -17,3 +17,5 @@ mutation*.json
 .terraform.lock.hcl
 *.tfstate*
 deploy/helm/llmgate/charts/
+.wheelsrc/
+wheels/*.whl

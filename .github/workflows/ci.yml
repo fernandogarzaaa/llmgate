@@ -1,0 +1,151 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint and type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check src tests bench
+      - run: mypy
+
+  test:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: llmgate
+          POSTGRES_PASSWORD: llmgate
+          POSTGRES_DB: llmgate
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U llmgate" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      LLMGATE_TEST_REDIS_URL: redis://localhost:6379/0
+      LLMGATE_TEST_DATABASE_URL: postgresql://llmgate:llmgate@localhost:5432/llmgate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "${{ matrix.python }}", cache: pip}
+      - run: pip install -e ".[dev,postgres]"
+      # The user's own libraries are optional. Try to install them; the suite runs (and skips the
+      # integration-specific tests) when they are not reachable, e.g. while the repos are private.
+      - name: Optional integrations (costroute, injectguard)
+        continue-on-error: true
+        run: |
+          pip install "costroute @ git+https://github.com/fernandogarzaaa/costroute.git" || echo "costroute unavailable"
+          pip install "injectguard @ git+https://github.com/fernandogarzaaa/injectguard.git" || echo "injectguard unavailable"
+      - run: python -m pytest -q -m "not slow" -rs
+      - name: End-to-end (real processes)
+        run: python -m pytest -q -m slow -rs
+
+  wheel:
+    name: Wheel smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install build twine && python -m build && twine check dist/*
+      - name: Install the wheel in a clean venv and run the quickstart
+        run: |
+          python -m venv /tmp/w && . /tmp/w/bin/activate
+          pip install dist/*.whl
+          cd /tmp && llmgate --version
+          llmgate check-config -c "$GITHUB_WORKSPACE/examples/config.mock.yaml"
+          python "$GITHUB_WORKSPACE/scripts/smoke_test.py" --config "$GITHUB_WORKSPACE/examples/config.mock.yaml"
+
+  docker:
+    name: Docker build and smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: llmgate:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Run gateway + mock upstream containers
+        run: |
+          docker network create llmgate
+          docker run -d --name mock --network llmgate llmgate:ci mock-upstream --host 0.0.0.0 --port 9000 --latency-ms 5
+          docker run -d --name gw --network llmgate -p 8080:8080 -e MOCK_URL=http://mock:9000 \
+            -e LLMGATE_DATABASE_URL=sqlite:////data/llmgate.db llmgate:ci
+          for i in $(seq 1 30); do curl -sf localhost:8080/healthz && break; sleep 2; done
+          test "$(docker inspect -f '{{.Config.User}}' llmgate:ci)" = "10001:10001"
+          curl -sf localhost:8080/v1/chat/completions -H "authorization: Bearer lg-demo-key-change-me" \
+            -d '{"model":"auto","messages":[{"role":"user","content":"hi"}]}' | tee /dev/stderr | grep -q '"choices"'
+          curl -sf localhost:8080/metrics | grep -q llmgate_requests_total
+          for i in $(seq 1 20); do s=$(docker inspect -f '{{.State.Health.Status}}' gw); [ "$s" = healthy ] && break; sleep 3; done
+          docker inspect -f '{{.State.Health.Status}}' gw | grep -q healthy
+      - if: failure()
+        run: docker logs gw; docker logs mock
+
+  helm:
+    name: Helm lint and template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with: {version: v3.16.2}
+      - run: helm lint deploy/helm/llmgate
+      - run: helm lint deploy/helm/llmgate --set serviceMonitor.enabled=true
+      - run: helm template t deploy/helm/llmgate --set serviceMonitor.enabled=true > rendered.yaml
+      - name: kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz
+          ./kubeconform -summary -strict -ignore-missing-schemas rendered.yaml
+
+  terraform:
+    name: Terraform validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: 1.9.8}
+      - run: terraform fmt -check -recursive deploy/terraform
+      - working-directory: deploy/terraform/examples/kubernetes
+        run: terraform init -backend=false -input=false && terraform validate
+
+  mutation:
+    name: Mutation score (testteeth, non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -e ".[dev,mutation]"
+      - run: testteeth run --workers 2 --json mutation.json | tee mutation.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report
+          path: mutation.*

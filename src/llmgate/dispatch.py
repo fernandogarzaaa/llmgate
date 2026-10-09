@@ -20,7 +20,7 @@ class ModelTarget:
     name: str
     provider: str
     upstream_model: str
-    price: Price = Price()
+    price: Price = field(default_factory=Price)
 
 
 @dataclass

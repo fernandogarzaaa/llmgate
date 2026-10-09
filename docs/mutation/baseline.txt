@@ -1,0 +1,405 @@
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------SSS.S....S.SS......S..SS...SS..S.....SSS..SSS..............S.......S....SS.SSS...SSSSS....SSS.......S............SSSSS....S.SS.........S..........SS..S..S......S....S.SSSS..SS.SSS.SSSS...S..SS..SS..S.SSSSSS.SS.SSS.........S....SS...SSSSSS..SS...SS...S........SSS..S.SS.....SSSS.SSSSS...SSSSSSSSSSSS..S....S.S.S...S..S..SS...S..S..S.SS.S..S....SS..S.........SS..S.S......... 543 mutants
+testteeth: mutation grade for all selected code
+
+src/llmgate/budget.py
+  <module>                             0.0%    0/4   killed  WEAK
+      L22   constant          `1970` -> `1971`  [survived]
+      L22   constant          `1` -> `2`  [survived]
+      L22   constant          `1` -> `2`  [survived]
+      L41   constant          `0.0` -> `1.0`  [survived]
+  period_start                        77.8%   14/18  killed  WEAK
+      L28   remove-raise      `raise ValueError("now must ...` -> `pass`  [not covered]
+      L34   comparison        `period == "total"` -> `(period != 'total')`  [not covered]
+      L35   return-value      `return _EPOCH` -> `return None`  [not covered]
+      L36   remove-raise      `raise ValueError(f"unknown ...` -> `pass`  [not covered]
+      ! L28   failure path (raise): `raise ValueError('now must be timezone-aware')` is never triggered by any test
+      ! L36   failure path (raise): `raise ValueError(f'unknown budget period {period!r}; expected o...` is never triggered by any test
+  Budget.__post_init__                80.0%    4/5   killed  WEAK
+      L46   remove-raise      `raise ValueError("budget mu...` -> `pass`  [not covered]
+      ! L46   failure path (raise): `raise ValueError('budget must be >= 0')` is never triggered by any test
+  Budget.unlimited                   100.0%    3/3   killed  ok
+  BudgetTracker._key                   0.0%    0/1   killed  WEAK
+      L72   return-value      `return tenant, period_start...` -> `return None`  [survived]
+  BudgetTracker.spent                100.0%    2/2   killed  ok
+  BudgetTracker.check                 42.9%    3/7   killed  WEAK
+      L81   constant          `0.0` -> `1.0`  [survived]
+      L82   arithmetic        `budget.limit_usd - spent` -> `(budget.limit_usd + spent)`  [survived]
+      L83   comparison        `spent < budget.limit_usd` -> `(spent <= budget.limit_usd)`  [survived]
+      L83   constant          `0.0` -> `1.0`  [survived]
+  BudgetTracker.add                   50.0%    3/6   killed  WEAK
+      L87   comparison        `cost < 0` -> `(cost <= 0)`  [survived]
+      L88   remove-raise      `raise ValueError("cost must...` -> `pass`  [not covered]
+      L92   return-value      `return self._spent[key]` -> `return None`  [survived]
+      ! L88   failure path (raise): `raise ValueError('cost must be >= 0')` is never triggered by any test
+  BudgetTracker.seed                   0.0%    0/8   killed  WEAK
+      L94   constant          `0.0` -> `1.0`  [survived]
+      L96   boolean           `spent_from_db < 0 or pendin...` -> `(spent_from_db < 0 and pend...`  [not covered]
+      L96   comparison        `spent_from_db < 0` -> `(spent_from_db <= 0)`  [not covered]
+      L96   constant          `0` -> `1`  [not covered]
+      L96   comparison        `pending < 0` -> `(pending <= 0)`  [not covered]
+      L96   constant          `0` -> `1`  [not covered]
+      L97   remove-raise      `raise ValueError("spend mus...` -> `pass`  [not covered]
+      L99   arithmetic        `spent_from_db + pending` -> `(spent_from_db - pending)`  [not covered]
+      ! L97   failure path (raise): `raise ValueError('spend must be >= 0')` is never triggered by any test
+  BudgetTracker.since                  0.0%    0/1   killed  WEAK
+      L102  return-value      `return period_start(self._c...` -> `return None`  [not covered]
+  BudgetTracker.prune                  0.0%    0/5   killed  WEAK
+      L106  boolean           `keep_after or period_start(...` -> `(keep_after and period_star...`  [not covered]
+      L108  comparison        `_EPOCH < k[1] < cutoff` -> `(_EPOCH <= k[1] < cutoff)`  [not covered]
+      L108  comparison        `_EPOCH < k[1] < cutoff` -> `(_EPOCH < k[1] <= cutoff)`  [not covered]
+      L108  constant          `1` -> `2`  [not covered]
+      L111  return-value      `return len(old)` -> `return None`  [not covered]
+src/llmgate/cache.py
+  <module>                             0.0%    0/1   killed  WEAK
+      L36   comparison        `f not in ("model", "messages")` -> `(f in ('model', 'messages'))`  [survived]
+  _canon                              33.3%    1/3   killed  WEAK
+      L40   constant          `True` -> `False`  [survived]
+      L40   constant          `False` -> `True`  [survived]
+  cache_key                          100.0%    5/5   killed  ok
+  is_cacheable                        92.3%   12/13  killed  WEAK
+      L54   return-value      `return False` -> `return None`  [survived]
+  _last_user_index                    50.0%    4/8   killed  WEAK
+      L62   constant          `1` -> `2`  [survived]
+      L62   constant          `1` -> `2`  [survived]
+      L65   return-value      `return -1` -> `return None`  [not covered]
+      L65   constant          `1` -> `2`  [not covered]
+  semantic_parts                      72.2%   13/18  killed  WEAK
+      L72   boolean           `not isinstance(messages, li...` -> `(not isinstance(messages, l...`  [survived]
+      L74   boolean           `body.get("tools") or body.g...` -> `(body.get('tools') and body...`  [survived]
+      L80   boolean           `not isinstance(content, str...` -> `(not isinstance(content, st...`  [survived]
+      L82   comparison        `body[k] is not None` -> `(body[k] is None)`  [survived]
+      L84   constant          `32` -> `33`  [survived]
+  MemoryCache.__init__                 0.0%    0/4   killed  WEAK
+      L93   constant          `10_000` -> `10001`  [survived]
+      L94   comparison        `max_entries < 1` -> `(max_entries <= 1)`  [survived]
+      L94   constant          `1` -> `2`  [survived]
+      L95   remove-raise      `raise ValueError("max_entri...` -> `pass`  [not covered]
+      ! L95   failure path (raise): `raise ValueError('max_entries must be >= 1')` is never triggered by any test
+  MemoryCache.__len__                  0.0%    0/1   killed  WEAK
+      L102  return-value      `return len(self._data)` -> `return None`  [not covered]
+  MemoryCache.get                     60.0%    3/5   killed  WEAK
+      L110  comparison        `self._clock() >= expires` -> `(self._clock() > expires)`  [survived]
+      L113  remove-call       `self._data.move_to_end(key)` -> `pass`  [survived]
+  MemoryCache.set                     11.1%    1/9   killed  WEAK
+      L116  constant          `0` -> `1`  [survived]
+      L118  comparison        `ttl_s > 0` -> `(ttl_s >= 0)`  [survived]
+      L118  constant          `0` -> `1`  [survived]
+      L118  constant          `0.0` -> `1.0`  [survived]
+      L121  remove-call       `self._data.move_to_end(key)` -> `pass`  [survived]
+      L122  comparison        `len(self._data) > self.max_...` -> `(len(self._data) >= self.ma...`  [survived]
+      L123  remove-call       `self._data.popitem(last=False)` -> `pass`  [not covered]
+      L123  constant          `False` -> `True`  [not covered]
+      ! L122  failure path (retry): retry loop: no test makes an attempt fail and checks the retry / give-up behaviour
+  MemoryCache.ping                     0.0%    0/2   killed  WEAK
+      L126  return-value      `return True` -> `return None`  [not covered]
+      L126  constant          `True` -> `False`  [not covered]
+  RedisCache.get                       0.0%    0/2   killed  WEAK
+      L137  return-value      `return None if raw is None ...` -> `return None`  [not covered]
+      L137  comparison        `raw is None` -> `(raw is not None)`  [not covered]
+  RedisCache.set                       0.0%    0/6   killed  WEAK
+      L139  constant          `0` -> `1`  [survived]
+      L141  comparison        `ttl_s > 0` -> `(ttl_s >= 0)`  [not covered]
+      L141  constant          `0` -> `1`  [not covered]
+      L142  remove-call       `await self._r.set(key, data...` -> `pass`  [not covered]
+      L142  constant          `1` -> `2`  [not covered]
+      L144  remove-call       `await self._r.set(key, data)` -> `pass`  [not covered]
+  RedisCache.ping                      0.0%    0/1   killed  WEAK
+      L147  return-value      `return bool(await self._r.p...` -> `return None`  [not covered]
+  SemanticHit.hit                    100.0%    2/2   killed  ok
+  _Namespace.add                      50.0%    1/2   killed  WEAK
+      L180  comparison        `len(self.entries) > max_ent...` -> `(len(self.entries) >= max_e...`  [survived]
+  _Namespace.best                     60.0%    6/10  killed  WEAK
+      L185  comparison        `e.expires > now` -> `(e.expires >= now)`  [survived]
+      L186  comparison        `len(live) != len(self.entries)` -> `(len(live) == len(self.entr...`  [survived]
+      L190  constant          `1` -> `2`  [survived]
+      L190  constant          `1.0` -> `2.0`  [survived]
+  normalize                           20.0%    1/5   killed  WEAK
+      L199  constant          `1` -> `2`  [survived]
+      L201  comparison        `n == 0` -> `(n != 0)`  [survived]
+      L201  constant          `0` -> `1`  [survived]
+      L201  arithmetic        `v / n` -> `(v * n)`  [survived]
+  SemanticCache.__init__              12.5%    2/16  killed  WEAK
+      L215  constant          `0.9` -> `1.9`  [survived]
+      L216  constant          `5_000` -> `5001`  [survived]
+      L217  constant          `0` -> `1`  [survived]
+      L221  comparison        `0.0 < threshold <= 1.0` -> `(0.0 <= threshold <= 1.0)`  [survived]
+      L221  comparison        `0.0 < threshold <= 1.0` -> `(0.0 < threshold < 1.0)`  [survived]
+      L221  constant          `1.0` -> `2.0`  [survived]
+      L222  remove-raise      `raise ValueError("threshold...` -> `pass`  [not covered]
+      L223  comparison        `max_entries_per_namespace < 1` -> `(max_entries_per_namespace ...`  [survived]
+      ... 6 more surviving
+      ! L222  failure path (raise): `raise ValueError('threshold must be in (0, 1]')` is never triggered by any test
+      ! L224  failure path (raise): `raise ValueError('max_entries_per_namespace must be >= 1')` is never triggered by any test
+      ! L240  failure path (external-call): calls `self._db.commit`, `self._db.execute`, `sqlite3.connect` but no test simulates that call failing
+  SemanticCache._namespace            75.0%    3/4   killed  WEAK
+      L253  remove-call       `space.entries.append( _Entr...` -> `pass`  [not covered]
+      ! L248  failure path (external-call): calls `self._db.execute` but no test simulates that call failing
+      ! L252  failure path (retry): retry loop: no test makes an attempt fail and checks the retry / give-up behaviour
+  SemanticCache._vector              100.0%    2/2   killed  ok
+  SemanticCache.lookup                85.7%    6/7   killed  WEAK
+      L268  comparison        `sim >= thr` -> `(sim > thr)`  [survived]
+  SemanticCache.store                 55.6%    5/9   killed  WEAK
+      L275  constant          `0` -> `1`  [survived]
+      L275  arithmetic        `self._clock() + self.ttl_s` -> `(self._clock() - self.ttl_s)`  [survived]
+      L280  remove-call       `self._db.execute( "INSERT I...` -> `pass`  [not covered]
+      L284  remove-call       `self._db.commit()` -> `pass`  [not covered]
+      ! L284  failure path (external-call): calls `self._db.commit`, `self._db.execute` but no test simulates that call failing
+  SemanticCache.size                   0.0%    0/1   killed  WEAK
+      L287  return-value      `return sum(len(s.entries) f...` -> `return None`  [not covered]
+  SemanticCache.close                  0.0%    0/2   killed  WEAK
+      L290  comparison        `self._db is not None` -> `(self._db is None)`  [not covered]
+      L291  remove-call       `self._db.close()` -> `pass`  [not covered]
+src/llmgate/cost.py
+  <module>                             0.0%    0/2   killed  WEAK
+      L14   constant          `0.0` -> `1.0`  [survived]
+      L15   constant          `0.0` -> `1.0`  [survived]
+  Price.__post_init__                 66.7%    4/6   killed  WEAK
+      L18   boolean           `self.input_per_1m < 0 or se...` -> `(self.input_per_1m < 0 and ...`  [survived]
+      L19   remove-raise      `raise ValueError("prices mu...` -> `pass`  [not covered]
+      ! L19   failure path (raise): `raise ValueError('prices must be >= 0')` is never triggered by any test
+  cost_usd                            58.3%    7/12  killed  WEAK
+      L24   boolean           `prompt_tokens < 0 or comple...` -> `(prompt_tokens < 0 and comp...`  [survived]
+      L24   comparison        `prompt_tokens < 0` -> `(prompt_tokens <= 0)`  [survived]
+      L24   constant          `0` -> `1`  [survived]
+      L25   remove-raise      `raise ValueError("token cou...` -> `pass`  [not covered]
+      L26   constant          `1_000_000` -> `1000001`  [survived]
+      ! L25   failure path (raise): `raise ValueError('token counts must be >= 0')` is never triggered by any test
+  estimate_tokens                    100.0%    7/7   killed  ok
+  message_text                       100.0%    5/5   killed  ok
+  usage_from_response                 44.4%    4/9   killed  WEAK
+      L69   boolean           `isinstance(pt, int) and isi...` -> `(isinstance(pt, int) or isi...`  [survived]
+      L69   comparison        `pt >= 0` -> `(pt > 0)`  [survived]
+      L69   constant          `0` -> `1`  [survived]
+      L69   comparison        `ct >= 0` -> `(ct > 0)`  [survived]
+      L69   constant          `0` -> `1`  [survived]
+src/llmgate/ratelimit.py
+  <module>                            50.0%    2/4   killed  WEAK
+      L25   constant          `0.0` -> `1.0`  [survived]
+      L26   constant          `0.0` -> `1.0`  [survived]
+  TokenBucket.__init__                33.3%    2/6   killed  WEAK
+      L33   comparison        `capacity <= 0` -> `(capacity < 0)`  [survived]
+      L34   remove-raise      `raise ValueError("capacity ...` -> `pass`  [not covered]
+      L35   comparison        `refill_per_s <= 0` -> `(refill_per_s < 0)`  [survived]
+      L36   remove-raise      `raise ValueError("refill_pe...` -> `pass`  [not covered]
+      ! L34   failure path (raise): `raise ValueError('capacity must be > 0')` is never triggered by any test
+      ! L36   failure path (raise): `raise ValueError('refill_per_s must be > 0')` is never triggered by any test
+  TokenBucket._refill                 75.0%    3/4   killed  WEAK
+      L47   arithmetic        `elapsed * self.refill_per_s` -> `(elapsed / self.refill_per_s)`  [survived]
+  TokenBucket.tokens                   0.0%    0/2   killed  WEAK
+      L53   remove-call       `self._refill()` -> `pass`  [not covered]
+      L54   return-value      `return self._tokens` -> `return None`  [not covered]
+  TokenBucket.try_acquire             52.9%    9/17  killed  WEAK
+      L62   comparison        `n < 0` -> `(n <= 0)`  [survived]
+      L62   constant          `0` -> `1`  [survived]
+      L63   remove-raise      `raise ValueError("n must be...` -> `pass`  [not covered]
+      L67   return-value      `return Decision(False, math...` -> `return None`  [not covered]
+      L67   constant          `False` -> `True`  [not covered]
+      L70   constant          `0.0` -> `1.0`  [survived]
+      L71   arithmetic        `(n - self._tokens) / self.r...` -> `((n - self._tokens) * self....`  [survived]
+      L71   arithmetic        `n - self._tokens` -> `(n + self._tokens)`  [survived]
+      ! L63   failure path (raise): `raise ValueError('n must be >= 0')` is never triggered by any test
+  TokenBucket.consume                  0.0%    0/2   killed  WEAK
+      L76   remove-call       `self._refill()` -> `pass`  [not covered]
+      L77   arithmetic        `self._tokens - n` -> `(self._tokens + n)`  [not covered]
+  RateLimiter._bucket                 50.0%    2/4   killed  WEAK
+      L99   arithmetic        `per_minute / 60.0` -> `(per_minute * 60.0)`  [survived]
+      L99   constant          `60.0` -> `61.0`  [survived]
+  RateLimiter.check                   44.4%    8/18  killed  WEAK
+      L105  constant          `0` -> `1`  [survived]
+      L109  constant          `0` -> `1`  [survived]
+      L109  comparison        `est_tokens > 0` -> `(est_tokens >= 0)`  [survived]
+      L109  constant          `0` -> `1`  [survived]
+      L111  boolean           `not d.allowed` -> `(d.allowed)`  [not covered]
+      L112  comparison        `limits.rpm > 0` -> `(limits.rpm >= 0)`  [not covered]
+      L112  constant          `0` -> `1`  [not covered]
+      L113  remove-call       `self._bucket(key, "rpm", li...` -> `pass`  [not covered]
+      ... 2 more surviving
+  RateLimiter.settle                   0.0%    0/5   killed  WEAK
+      L119  comparison        `limits.tpm > 0` -> `(limits.tpm >= 0)`  [not covered]
+      L119  constant          `0` -> `1`  [not covered]
+      L120  constant          `0` -> `1`  [not covered]
+      L121  remove-call       `self._bucket(key, "tpm", li...` -> `pass`  [not covered]
+      L121  arithmetic        `actual_tokens - charged` -> `(actual_tokens + charged)`  [not covered]
+  RedisRateLimiter.__init__            n/a    0/0   killed
+      ! L164  failure path (external-call): calls `redis.register_script` but no test simulates that call failing
+  RedisRateLimiter._call               0.0%    0/12  killed  WEAK
+      L169  arithmetic        `per_minute / 60.0` -> `(per_minute * 60.0)`  [not covered]
+      L169  constant          `60.0` -> `61.0`  [not covered]
+      L169  constant          `1` -> `2`  [not covered]
+      L169  constant          `0` -> `1`  [not covered]
+      L172  comparison        `retry_ms < 0` -> `(retry_ms <= 0)`  [not covered]
+      L172  constant          `0` -> `1`  [not covered]
+      L172  arithmetic        `retry_ms / 1000.0` -> `(retry_ms * 1000.0)`  [not covered]
+      L172  constant          `1000.0` -> `1001.0`  [not covered]
+      ... 4 more surviving
+  RedisRateLimiter.check               0.0%    0/21  killed  WEAK
+      L176  comparison        `limits.rpm > 0` -> `(limits.rpm >= 0)`  [not covered]
+      L176  constant          `0` -> `1`  [not covered]
+      L177  constant          `1` -> `2`  [not covered]
+      L177  constant          `False` -> `True`  [not covered]
+      L178  boolean           `not d.allowed` -> `(d.allowed)`  [not covered]
+      L179  return-value      `return d, "rpm"` -> `return None`  [not covered]
+      L180  boolean           `limits.tpm > 0 and est_toke...` -> `(limits.tpm > 0 or est_toke...`  [not covered]
+      L180  comparison        `limits.tpm > 0` -> `(limits.tpm >= 0)`  [not covered]
+      ... 13 more surviving
+  RedisRateLimiter.settle              0.0%    0/6   killed  WEAK
+      L189  comparison        `limits.tpm > 0` -> `(limits.tpm >= 0)`  [not covered]
+      L189  constant          `0` -> `1`  [not covered]
+      L190  constant          `0` -> `1`  [not covered]
+      L191  remove-call       `await self._call(key, "tpm"...` -> `pass`  [not covered]
+      L191  arithmetic        `actual_tokens - charged` -> `(actual_tokens + charged)`  [not covered]
+      L191  constant          `True` -> `False`  [not covered]
+  make_limiter                         0.0%    0/2   killed  WEAK
+      L195  return-value      `return RedisRateLimiter(red...` -> `return None`  [not covered]
+      L195  comparison        `redis is not None` -> `(redis is None)`  [not covered]
+src/llmgate/resilience.py
+  <module>                             6.7%    1/15  killed  WEAK
+      L12   constant          `0` -> `1`  [survived]
+      L12   constant          `1` -> `2`  [survived]
+      L12   constant          `2` -> `3`  [survived]
+      L95   constant          `408` -> `409`  [survived]
+      L95   constant          `409` -> `410`  [survived]
+      L95   constant          `425` -> `426`  [survived]
+      L95   constant          `500` -> `501`  [survived]
+      L95   constant          `502` -> `503`  [survived]
+      ... 6 more surviving
+  CircuitBreaker.__init__             33.3%    5/15  killed  WEAK
+      L26   constant          `5` -> `6`  [survived]
+      L27   constant          `30.0` -> `31.0`  [survived]
+      L28   constant          `1` -> `2`  [survived]
+      L32   remove-raise      `raise ValueError("failure_t...` -> `pass`  [not covered]
+      L33   comparison        `recovery_s < 0` -> `(recovery_s <= 0)`  [survived]
+      L33   constant          `0` -> `1`  [survived]
+      L34   remove-raise      `raise ValueError("recovery_...` -> `pass`  [not covered]
+      L36   remove-raise      `raise ValueError("half_open...` -> `pass`  [not covered]
+      ... 2 more surviving
+      ! L32   failure path (raise): `raise ValueError('failure_threshold must be >= 1')` is never triggered by any test
+      ! L34   failure path (raise): `raise ValueError('recovery_s must be >= 0')` is never triggered by any test
+      ! L36   failure path (raise): `raise ValueError('half_open_max must be >= 1')` is never triggered by any test
+  CircuitBreaker._current             83.3%    5/6   killed  WEAK
+      L48   arithmetic        `self._clock() - self._opene...` -> `(self._clock() + self._open...`  [survived]
+  CircuitBreaker.state               100.0%    1/1   killed  ok
+  CircuitBreaker.failures              0.0%    0/1   killed  WEAK
+      L60   return-value      `return self._failures` -> `return None`  [not covered]
+  CircuitBreaker.allow                66.7%    8/12  killed  WEAK
+      L68   comparison        `self._trials < self.half_op...` -> `(self._trials <= self.half_...`  [survived]
+      L69   arithmetic        `self._trials += 1` -> `self._trials -= 1`  [survived]
+      L69   constant          `1` -> `2`  [survived]
+      L71   return-value      `return False` -> `return None`  [survived]
+  CircuitBreaker.record_success        0.0%    0/2   killed  WEAK
+      L76   constant          `0` -> `1`  [survived]
+      L77   constant          `0` -> `1`  [survived]
+  CircuitBreaker.record_failure       83.3%    5/6   killed  WEAK
+      L83   remove-call       `self._trip()` -> `pass`  [not covered]
+  CircuitBreaker._trip                 0.0%    0/1   killed  WEAK
+      L92   constant          `0` -> `1`  [survived]
+  is_retryable_status                 60.0%    3/5   killed  WEAK
+      L100  comparison        `status >= 500` -> `(status > 500)`  [survived]
+      L100  constant          `500` -> `501`  [survived]
+  RetryPolicy.__post_init__            0.0%    0/9   killed  WEAK
+      L112  comparison        `self.max_retries < 0` -> `(self.max_retries <= 0)`  [survived]
+      L112  constant          `0` -> `1`  [survived]
+      L113  remove-raise      `raise ValueError("max_retri...` -> `pass`  [not covered]
+      L114  boolean           `self.base_s < 0 or self.max...` -> `(self.base_s < 0 and self.m...`  [survived]
+      L114  comparison        `self.base_s < 0` -> `(self.base_s <= 0)`  [survived]
+      L114  constant          `0` -> `1`  [survived]
+      L114  comparison        `self.max_s < 0` -> `(self.max_s <= 0)`  [survived]
+      L114  constant          `0` -> `1`  [survived]
+      ... 1 more surviving
+      ! L113  failure path (raise): `raise ValueError('max_retries must be >= 0')` is never triggered by any test
+      ! L115  failure path (raise): `raise ValueError('delays must be >= 0')` is never triggered by any test
+  RetryPolicy.delay                   83.3%    5/6   killed  WEAK
+      L119  constant          `2` -> `3`  [survived]
+  RetryPolicy.delays                 100.0%    1/1   killed  ok
+  parse_retry_after                    0.0%    0/8   killed  WEAK
+      L127  constant          `30.0` -> `31.0`  [survived]
+      L129  comparison        `value is None` -> `(value is not None)`  [not covered]
+      L134  swallow-exception `return None` -> `pass`  [not covered]
+      L135  boolean           `secs < 0 or secs != secs` -> `(secs < 0 and secs != secs)`  [not covered]
+      L135  comparison        `secs < 0` -> `(secs <= 0)`  [not covered]
+      L135  constant          `0` -> `1`  [not covered]
+      L135  comparison        `secs != secs` -> `(secs == secs)`  [not covered]
+      L137  return-value      `return min(secs, max_s)` -> `return None`  [not covered]
+      ! L134  failure path (except-branch): `except ValueError` branch is never executed by any test
+src/llmgate/routing.py
+  <module>                             0.0%    0/1   killed  WEAK
+      L82   constant          `0.5` -> `1.5`  [survived]
+  Rule.__post_init__                  42.9%    3/7   killed  WEAK
+      L52   comparison        `self.min_chars is not None` -> `(self.min_chars is None)`  [survived]
+      L52   comparison        `self.min_chars > self.max_c...` -> `(self.min_chars >= self.max...`  [survived]
+      L53   remove-raise      `raise ValueError(f"rule {se...` -> `pass`  [not covered]
+      L55   remove-call       `object.__setattr__(self, "_...` -> `pass`  [not covered]
+      ! L53   failure path (raise): `raise ValueError(f'rule {self.name!r}: min_chars > max_chars')` is never triggered by any test
+  Rule.matches                        43.3%   13/30  killed  WEAK
+      L58   comparison        `ctx.requested_model != self...` -> `(ctx.requested_model == sel...`  [survived]
+      L59   return-value      `return False` -> `return None`  [not covered]
+      L59   constant          `False` -> `True`  [not covered]
+      L60   comparison        `ctx.tenant != self.tenant` -> `(ctx.tenant == self.tenant)`  [survived]
+      L61   return-value      `return False` -> `return None`  [not covered]
+      L61   constant          `False` -> `True`  [not covered]
+      L63   comparison        `n < self.min_chars` -> `(n <= self.min_chars)`  [survived]
+      L64   return-value      `return False` -> `return None`  [survived]
+      ... 9 more surviving
+  CostRouteConfig.__post_init__       33.3%    2/6   killed  WEAK
+      L85   comparison        `0.0 <= self.threshold <= 1.0` -> `(0.0 < self.threshold <= 1.0)`  [survived]
+      L85   comparison        `0.0 <= self.threshold <= 1.0` -> `(0.0 <= self.threshold < 1.0)`  [survived]
+      L85   constant          `1.0` -> `2.0`  [survived]
+      L86   remove-raise      `raise ValueError("threshold...` -> `pass`  [not covered]
+      ! L86   failure path (raise): `raise ValueError('threshold must be in [0, 1]')` is never triggered by any test
+  RouteDecision.candidates             0.0%    0/3   killed  WEAK
+      L101  comparison        `m not in out` -> `(m in out)`  [not covered]
+      L102  remove-call       `out.append(m)` -> `pass`  [not covered]
+      L103  return-value      `return out` -> `return None`  [not covered]
+  parse_threshold                      0.0%    0/13  killed  WEAK
+      L112  boolean           `raw is None or raw == ""` -> `(raw is None and raw == '')`  [not covered]
+      L112  comparison        `raw is None` -> `(raw is not None)`  [not covered]
+      L112  comparison        `raw == ""` -> `(raw != '')`  [not covered]
+      L113  return-value      `return default` -> `return None`  [not covered]
+      L117  swallow-exception `raise ValueError(f"threshol...` -> `pass`  [not covered]
+      L117  remove-raise      `raise ValueError(f"threshol...` -> `pass`  [not covered]
+      L118  boolean           `not 0.0 <= v <= 1.0` -> `(0.0 <= v <= 1.0)`  [not covered]
+      L118  comparison        `0.0 <= v <= 1.0` -> `(0.0 < v <= 1.0)`  [not covered]
+      ... 5 more surviving
+      ! L117  failure path (except-branch): `except ValueError` branch is never executed by any test
+      ! L119  failure path (raise): `raise ValueError('threshold must be in [0, 1]')` is never triggered by any test
+  Router.__init__                     50.0%    6/12  killed  WEAK
+      L141  comparison        `r.route_to != alias` -> `(r.route_to == alias)`  [survived]
+      L142  remove-raise      `raise ValueError(f"rule {r....` -> `pass`  [not covered]
+      L146  remove-raise      `raise ValueError(f"costrout...` -> `pass`  [not covered]
+      L147  comparison        `default_model not in known` -> `(default_model in known)`  [survived]
+      L147  comparison        `default_model != alias` -> `(default_model == alias)`  [survived]
+      L148  remove-raise      `raise ValueError(f"default_...` -> `pass`  [not covered]
+      ! L142  failure path (raise): `raise ValueError(f'rule {r.name!r} routes to unknown model {r.r...` is never triggered by any test
+      ! L146  failure path (raise): `raise ValueError(f'costroute model {m!r} is not configured')` is never triggered by any test
+      ! L148  failure path (raise): `raise ValueError(f'default_model {default_model!r} is not confi...` is never triggered by any test
+  Router.public_models                 0.0%    0/3   killed  WEAK
+      L152  comparison        `self.costroute is not None` -> `(self.costroute is None)`  [not covered]
+      L153  remove-call       `names.append(self.costroute...` -> `pass`  [not covered]
+      L154  return-value      `return names` -> `return None`  [not covered]
+  Router.needs_score                   0.0%    0/5   killed  WEAK
+      L158  return-value      `return self.costroute is no...` -> `return None`  [not covered]
+      L158  boolean           `self.costroute is not None ...` -> `(self.costroute is not None...`  [not covered]
+      L158  comparison        `self.costroute is not None` -> `(self.costroute is None)`  [not covered]
+      L158  comparison        `self._target(ctx)[0] == sel...` -> `(self._target(ctx)[0] != se...`  [not covered]
+      L158  constant          `0` -> `1`  [not covered]
+  Router._target                      75.0%    3/4   killed  WEAK
+      L164  boolean           `self.default_model or ""` -> `(self.default_model and '')`  [survived]
+  Router.route                        77.3%   17/22  killed  WEAK
+      L175  remove-raise      `raise RoutingError("cost ro...` -> `pass`  [not covered]
+      L178  comparison        `score >= thr` -> `(score > thr)`  [survived]
+      L179  comparison        `model == cr.strong` -> `(model != cr.strong)`  [survived]
+      L180  comparison        `rule.fallbacks is not None` -> `(rule.fallbacks is None)`  [survived]
+      L184  comparison        `rule is not None` -> `(rule is None)`  [survived]
+      ! L175  failure path (raise): `raise RoutingError('cost router alias requested but no scorer i...` is never triggered by any test
+  rules_from_config                   42.9%    3/7   killed  WEAK
+      L198  comparison        `"route_to" not in it` -> `('route_to' in it)`  [not covered]
+      L199  remove-raise      `raise ValueError(f"rule #{i...` -> `pass`  [not covered]
+      L200  remove-call       `out.append(Rule(name=str(it...` -> `pass`  [not covered]
+      L202  return-value      `return out` -> `return None`  [not covered]
+      ! L199  failure path (raise): `raise ValueError(f'rule #{i}: missing route_to')` is never triggered by any test
+
+Mutants: 543  killed: 230  survived: 143  not covered: 170  timeouts: 0
+Failure-path gaps: 34
+Mutation score: 42.4%
+Time: baseline 20.7s, total 1203.5s
+Next: `testteeth suggest` prints an agent-ready brief for each surviving mutant.
