@@ -78,6 +78,20 @@ def test_rule_headers_case_insensitive_names_exact_values():
     assert not r2.matches(ctx(headers={"a": "1"})) and r2.matches(ctx(headers={"A": "1", "b": "2"}))
 
 
+def test_rule_non_match_is_false_not_falsy():
+    c = ctx("weak", "abc", "acme", {"x": "1"})
+    for r in (
+        Rule("r", "w", model="strong"),
+        Rule("r", "w", tenant="other"),
+        Rule("r", "w", min_chars=9),
+        Rule("r", "w", max_chars=1),
+        Rule("r", "w", contains="zzz"),
+        Rule("r", "w", header={"x": "2"}),
+    ):
+        assert r.matches(c) is False
+    assert Rule("r", "w").matches(c) is True
+
+
 def test_rule_conditions_are_anded():
     r = Rule("r", "weak", model="strong", tenant="acme", contains="x")
     assert r.matches(ctx("strong", "x", "acme"))

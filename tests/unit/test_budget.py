@@ -127,3 +127,11 @@ def test_prune_drops_old_periods_only():
     assert bt.prune() == 0
     assert bt.prune(keep_after=datetime(2026, 10, 3, tzinfo=UTC)) == 1
     assert bt.spent("t", Budget(1, "daily")) == 0
+
+
+def test_prune_keeps_the_period_starting_at_the_cutoff():
+    clock = Clock(datetime(2026, 10, 5, tzinfo=UTC))
+    bt = BudgetTracker(clock)
+    bt.add("t", Budget(1, "monthly"), 1)  # period starts Oct 1
+    assert bt.prune(keep_after=datetime(2026, 10, 1, tzinfo=UTC)) == 0
+    assert bt.spent("t", Budget(1, "monthly")) == 1

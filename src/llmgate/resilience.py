@@ -74,7 +74,6 @@ class CircuitBreaker:
         with self._lock:
             self._state = CLOSED
             self._failures = 0
-            self._trials = 0
 
     def record_failure(self) -> None:
         with self._lock:
@@ -89,7 +88,6 @@ class CircuitBreaker:
     def _trip(self) -> None:
         self._state = OPEN
         self._opened_at = self._clock()
-        self._trials = 0
 
 
 # Plus every 5xx (500-599, and vendor codes such as Anthropic's 529 "overloaded").

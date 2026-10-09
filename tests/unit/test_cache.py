@@ -306,3 +306,49 @@ async def test_semantic_sqlite_persistence(tmp_path):
     assert not (await sc2.lookup("ns", "c")).hit
     assert not (await sc2.lookup("other", "c")).hit
     sc2.close()
+
+
+async def test_memory_cache_sub_second_ttl():
+    t = [0.0]
+    c = MemoryCache(10, clock=lambda: t[0])
+    await c.set("k", 1, ttl_s=0.5)
+    t[0] = 0.6
+    assert await c.get("k") is None
+
+
+async def test_semantic_exact_match_at_threshold_one():
+    sc = SemanticCache(embed, threshold=1.0)
+    await sc.store("ns", "a", "A")
+    hit = await sc.lookup("ns", "a")
+    assert hit.hit and hit.similarity == 1.0
+
+
+async def test_semantic_sub_second_ttl():
+    t = [0.0]
+    sc = SemanticCache(embed, threshold=0.9, ttl_s=0.5, clock=lambda: t[0])
+    await sc.store("ns", "a", "A")
+    t[0] = 0.6
+    assert not (await sc.lookup("ns", "a")).hit
+
+
+async def test_semantic_sqlite_schema_threads_and_close(tmp_path):
+    import asyncio
+    import sqlite3
+
+    path = str(tmp_path / "s.db")
+    sc = SemanticCache(embed, threshold=0.9, sqlite_path=path)
+    idx = (
+        sqlite3.connect(path)
+        .execute("SELECT name FROM sqlite_master WHERE type='index' AND name='ix_semantic_ns'")
+        .fetchall()
+    )
+    assert idx == [("ix_semantic_ns",)]
+    # the gateway stores from worker threads: the connection must allow it
+    await asyncio.to_thread(asyncio.run, sc.store("ns", "a", "A"))
+    assert (await sc.lookup("ns", "a")).hit
+    conn = sc._db
+    sc.close()
+    assert sc._db is None
+    with pytest.raises(sqlite3.ProgrammingError):
+        conn.execute("SELECT 1")
+    SemanticCache(embed).close()  # memory-only close is a no-op

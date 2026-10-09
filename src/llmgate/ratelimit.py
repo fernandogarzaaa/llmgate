@@ -169,8 +169,10 @@ class RedisRateLimiter:
             args=[per_minute, per_minute / 60.0, self._clock(), n, 1 if force else 0],
         )
         allowed, tokens_milli, retry_ms = (int(x) for x in res)
-        retry = math.inf if retry_ms < 0 else retry_ms / 1000.0
-        return Decision(bool(allowed), 0.0 if allowed else retry, tokens_milli / 1000.0)
+        remaining = tokens_milli / 1000.0
+        if allowed:
+            return Decision(True, 0.0, remaining)
+        return Decision(False, math.inf if retry_ms == -1 else retry_ms / 1000.0, remaining)
 
     async def check(self, key: str, limits: Limits, est_tokens: int) -> Tuple[Decision, str]:
         if limits.rpm > 0:

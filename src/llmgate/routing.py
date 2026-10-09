@@ -47,6 +47,7 @@ class Rule:
     tenant: Optional[str] = None
     header: Optional[Dict[str, str]] = None  # every header must equal the given value
     fallbacks: Optional[List[str]] = None  # overrides the target model's own fallbacks
+    _rx: Optional[re.Pattern[str]] = field(default=None, init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if self.min_chars is not None and self.max_chars is not None and self.min_chars > self.max_chars:
@@ -64,7 +65,7 @@ class Rule:
             return False
         if self.max_chars is not None and n > self.max_chars:
             return False
-        if self.contains is not None and not self._rx.search(ctx.prompt):
+        if self._rx is not None and not self._rx.search(ctx.prompt):
             return False
         if self.header:
             lower = {k.lower(): v for k, v in ctx.headers.items()}

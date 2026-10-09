@@ -194,17 +194,16 @@ class _Namespace:
 
     def add(self, e: _Entry, max_entries: int) -> None:
         self.entries.append(e)
-        if len(self.entries) > max_entries:
-            del self.entries[: len(self.entries) - max_entries]
+        del self.entries[:-max_entries]  # keep the newest max_entries
         self.matrix = None
 
-    def best(self, vec: np.ndarray, now: float) -> Tuple[int, float]:
+    def best(self, vec: np.ndarray, now: float) -> Tuple[Optional[int], float]:
         live = [e for e in self.entries if not e.expires or e.expires > now]
         if len(live) != len(self.entries):
             self.entries = live
             self.matrix = None
         if not self.entries:
-            return -1, -1.0
+            return None, -1.0
         if self.matrix is None:
             self.matrix = np.stack([e.vec for e in self.entries])
         sims = self.matrix @ vec
@@ -213,7 +212,7 @@ class _Namespace:
 
 
 def normalize(v: np.ndarray) -> np.ndarray:
-    v = np.asarray(v, dtype=np.float32).reshape(-1)
+    v = np.asarray(v, dtype=np.float32).ravel()
     n = float(np.linalg.norm(v))
     return v if n == 0 else v / n
 
@@ -254,7 +253,6 @@ class SemanticCache:
                 "vec BLOB NOT NULL, payload TEXT NOT NULL, expires REAL NOT NULL)"
             )
             self._db.execute("CREATE INDEX IF NOT EXISTS ix_semantic_ns ON semantic_cache(namespace)")
-            self._db.commit()
 
     def _namespace(self, ns: str) -> _Namespace:
         with self._lock:
@@ -283,7 +281,7 @@ class SemanticCache:
         with self._lock:
             i, sim = space.best(vec, self._clock())
             thr = self.threshold if threshold is None else threshold
-            if i >= 0 and sim >= thr:
+            if i is not None and sim >= thr:
                 e = space.entries[i]
                 return SemanticHit(e.payload, sim, vec, e.text)
         return SemanticHit(None, sim, vec)

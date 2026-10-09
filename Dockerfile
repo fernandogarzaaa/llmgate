@@ -24,6 +24,8 @@ RUN set -eux; whl="$(ls /tmp/llmgate-*.whl)"; \
     rm -rf /tmp/*.whl /tmp/wheels
 COPY examples/config.mock.yaml /etc/llmgate/config.yaml
 RUN mkdir -p /data && chown llmgate:llmgate /data
+# Relative paths in the config (SQLite files, semantic cache) resolve under the writable /data.
+WORKDIR /data
 USER 10001:10001
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=3 \

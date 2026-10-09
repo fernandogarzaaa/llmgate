@@ -265,3 +265,83 @@ async def test_redis_oversized_and_zero_estimates(redis):
     assert not d.allowed and math.isinf(d.retry_after_s)
     await rl.settle("a", lim, 1000, 10)
     assert float((await redis.hget("llmgate:rl:a:tpm:10", "t")).decode()) == pytest.approx(0.0)
+
+
+# ----------------------------------------------------------------------------- boundaries
+def test_consume_refills_before_charging():
+    c = Clock()
+    b = TokenBucket(10, 1.0, c)
+    b.consume(10)  # empty at t=0
+    c.t = 20  # bucket would be full again (capped at 10)
+    b.consume(5)
+    assert b.tokens == pytest.approx(5.0)
+
+
+async def test_limits_of_one_are_enforced():
+    rl = RateLimiter(Clock())
+    assert (await rl.check("t", Limits(rpm=1), 0))[0].allowed
+    assert (await rl.check("t", Limits(rpm=1), 0))[1] == "rpm"
+    assert (await rl.check("u", Limits(tpm=1), 1))[0].allowed
+    assert (await rl.check("u", Limits(tpm=1), 1))[1] == "tpm"
+
+
+async def test_tpm_refund_with_rpm_of_one():
+    rl = RateLimiter(Clock())
+    lim = Limits(rpm=1, tpm=5)
+    rl._bucket("t", "tpm", 5).consume(5)  # TPM exhausted
+    d, which = await rl.check("t", lim, 1)
+    assert which == "tpm"
+    assert rl._bucket("t", "rpm", 1).tokens == pytest.approx(1.0)  # slot refunded
+
+
+async def test_settle_with_tpm_of_one():
+    rl = RateLimiter(Clock())
+    await rl.settle("t", Limits(tpm=1), 0, 3)
+    assert rl._bucket("t", "tpm", 1).tokens == pytest.approx(-2.0)
+
+
+async def test_zero_estimate_creates_no_tpm_bucket():
+    rl = RateLimiter(Clock())
+    await rl.check("t", Limits(tpm=10), 0)
+    assert rl._buckets == {}
+
+
+async def test_redis_call_decision_fields(redis):
+    rl = RedisRateLimiter(redis, clock=Clock(10.0))
+    d = await rl._call("a", "tpm", 60, 15, False)  # capacity 60, 1 token/s
+    assert d == Decision(True, 0.0, 45.0)
+    d = await rl._call("a", "tpm", 60, 50, False)
+    assert not d.allowed and d.retry_after_s == pytest.approx(5.0) and d.remaining == pytest.approx(45.0)
+
+
+async def test_redis_force_can_go_negative(redis):
+    rl = RedisRateLimiter(redis, clock=Clock(10.0))
+    lim = Limits(tpm=100)
+    assert (await rl.check("a", lim, 10))[0].allowed
+    await rl.settle("a", lim, 10, 200)  # 190 more than estimated -> -100
+    assert (await rl._call("a", "tpm", 100, 0, False)).remaining == pytest.approx(-100.0)
+    assert not (await rl.check("a", lim, 1))[0].allowed
+
+
+async def test_redis_limits_of_one(redis):
+    c = Clock(10.0)
+    rl = RedisRateLimiter(redis, clock=c)
+    assert (await rl.check("r", Limits(rpm=1), 0))[0].allowed
+    assert (await rl.check("r", Limits(rpm=1), 0))[1] == "rpm"
+    assert (await rl.check("t", Limits(tpm=1), 1))[0].allowed
+    assert (await rl.check("t", Limits(tpm=1), 1))[1] == "tpm"
+    await rl.settle("s", Limits(tpm=1), 0, 3)
+    assert (await rl._call("s", "tpm", 1, 0, False)).remaining == pytest.approx(-2.0)
+    # TPM rejection refunds an RPM limit of one
+    lim = Limits(rpm=1, tpm=1)
+    await rl._call("q", "tpm", 1, 1, True)
+    assert (await rl.check("q", lim, 1))[1] == "tpm"
+    assert (await rl._call("q", "rpm", 1, 0, False)).remaining == pytest.approx(1.0)
+
+
+async def test_redis_zero_estimate_and_no_tpm_touch_nothing(redis):
+    rl = RedisRateLimiter(redis, prefix="z", clock=Clock(10.0))
+    await rl.check("a", Limits(tpm=10), 0)
+    await rl.check("a", Limits(), 5)
+    await rl.settle("a", Limits(), 5, 50)
+    assert await redis.keys("z:*") == []
