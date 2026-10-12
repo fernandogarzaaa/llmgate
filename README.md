@@ -273,6 +273,17 @@ Redis rate limiting is otherwise exercised through `fakeredis` with Lua. The gua
 costroute and injectguard adapter tests are skipped when those libraries are not installed; a
 separate test then checks that the gateway runs with guardrails disabled.
 
+### Budgets and multiple replicas
+
+Rate limits and the exact cache are shared across replicas through Redis (`redis_url`). **Budgets
+are not:** each replica keeps the current period's spend in memory and re-reads the usage table
+every `budget_refresh_s` (default 30 s). With N replicas a tenant can overspend its budget by up to
+roughly N x (what it spends in one refresh window) before every replica sees the total. For that
+reason the Helm chart defaults to `replicaCount: 1` with autoscaling off, and the Terraform module
+defaults to `replicas_min = replicas_max = 1`. If you scale out, treat budgets as soft limits, or
+lower `budget_refresh_s` to shrink the window. Redis-backed atomic budget counters are not
+implemented yet.
+
 ## Limitations and what is untested
 
 - **Docker image and docker-compose:** the Dockerfile and compose stack have never been built or
@@ -291,6 +302,8 @@ separate test then checks that the gateway runs with guardrails disabled.
 - **Benchmarks:** one contended 2-vCPU host, no c=50 data, a single run per configuration, and an
   unexplained slowdown in the semantic-cache miss path at c=10 (see above). The semantic-cache
   numbers come from one dataset with deliberately hard negatives.
+- **Budgets across replicas:** budget spend is per-process memory re-seeded from the database,
+  so budgets are only exact with a single replica (see "Budgets and multiple replicas").
 - **Semantic cache scale:** brute-force cosine search per namespace (default cap 5,000 entries);
   there is no ANN index.
 

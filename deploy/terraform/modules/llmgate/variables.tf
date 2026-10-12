@@ -30,13 +30,15 @@ variable "image_tag" {
 }
 
 variable "replicas_min" {
-  type    = number
-  default = 2
+  description = "HPA minimum replicas. Budgets are tracked in memory per replica (re-seeded from the DB every budget_refresh_s), so more than 1 replica lets a tenant overspend by up to ~replicas x one refresh window."
+  type        = number
+  default     = 1
 }
 
 variable "replicas_max" {
-  type    = number
-  default = 10
+  description = "HPA maximum replicas. Defaults to 1 so budgets stay exact; raise it only if per-replica budget overshoot is acceptable (see README, Budgets and multiple replicas)."
+  type        = number
+  default     = 1
 }
 
 variable "database_url" {
