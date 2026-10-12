@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Helm chart defaults to `replicaCount: 1` with autoscaling off, and the Terraform module defaults
+  to `replicas_min = replicas_max = 1`, because budgets are tracked in memory per replica and can be
+  overspent by up to ~replicas x one `budget_refresh_s` window when scaled out. Documented in the
+  README ("Budgets and multiple replicas").
+
 ## [0.1.0] - 2026-10-09
 
 ### Added
