@@ -63,5 +63,9 @@ def load_guard(cfg: GuardConfig) -> Optional[GuardBackend]:
     except ImportError as exc:
         if cfg.required:
             raise RuntimeError(f"guard.required is true but injectguard is unavailable: {exc}") from None
-        log.warning("injectguard is not installed; guardrails are DISABLED (pip install 'llmgate[guard]')")
+        log.warning(
+            "injectguard is not installed; guardrails are DISABLED "
+            '(pip install "injectguard @ git+https://github.com/fernandogarzaaa/injectguard.git"; '
+            "the PyPI package of that name is unrelated)"
+        )
         return None
