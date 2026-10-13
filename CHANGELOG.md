@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+- Removed the `costroute` and `guard` extras. `injectguard` on PyPI is an unrelated third-party
+  package and `costroute` is unclaimed there, so `pip install 'llmgate[guard]'` (which the startup
+  warning recommended) installed someone else's code into the gateway. The warning, the router
+  error and the README now point at the git URLs of the real libraries.
+
 ### Changed
 - Helm chart defaults to `replicaCount: 1` with autoscaling off, and the Terraform module defaults
   to `replicas_min = replicas_max = 1`, because budgets are tracked in memory per replica and can be

@@ -60,7 +60,7 @@ def load_scorer(spec: str = "heuristic") -> Tuple[object, str]:
             log.warning("costroute is not installed; using the vendored heuristic router")
             return VendoredHeuristicRouter(), "vendored"
         raise ImportError(
-            f"router {spec!r} needs the costroute package: pip install 'llmgate[costroute]' "
-            "(or install costroute from its repository)"
+            f"router {spec!r} needs the costroute package: "
+            'pip install "costroute @ git+https://github.com/fernandogarzaaa/costroute.git"'
         ) from None
     return load_router(spec), "costroute"

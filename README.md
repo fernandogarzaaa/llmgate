@@ -69,8 +69,14 @@ directory. The OpenAI Python SDK works unchanged:
 Guardrails and the full cost router come from two optional libraries, `injectguard` and
 `costroute`, which are not on PyPI yet. Without them `/healthz` reports guardrails as disabled
 and routing uses a vendored heuristic, so a prompt-injection request is forwarded instead of
-being blocked with `guardrail_input_blocked`. With them installed (`pip install ./path/to/injectguard
-./path/to/costroute`) the same config blocks it.
+being blocked with `guardrail_input_blocked`. With them installed the same config blocks it:
+
+```bash
+pip install "injectguard @ git+https://github.com/fernandogarzaaa/injectguard.git" \
+            "costroute @ git+https://github.com/fernandogarzaaa/costroute.git"
+```
+
+Do not `pip install injectguard` from PyPI: that name belongs to an unrelated project.
 
 `python scripts/smoke_test.py` runs the same flow (plus Anthropic-format streaming, the guard
 check when injectguard is installed, metrics and usage) on throwaway ports and fails on the first
